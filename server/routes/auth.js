@@ -22,8 +22,11 @@ router.post("/login", async (req, res) => {
         department: department || "",
         year: year || "",
         bio: bio || "VIT-AP Student. Connect to buy or sell items.",
-        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
+        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
       });
+      await user.save();
+    } else if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
+      user.isAdmin = true;
       await user.save();
     }
 
@@ -163,8 +166,11 @@ router.post("/google", async (req, res) => {
         department: "",
         year: "",
         bio: "VIT-AP Student. Logged in with Google OAuth.",
-        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
+        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
       });
+      await user.save();
+    } else if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
+      user.isAdmin = true;
       await user.save();
     }
 
@@ -280,8 +286,11 @@ router.post("/github", async (req, res) => {
         department: "",
         year: "",
         bio: "VIT-AP Student. Logged in with GitHub OAuth.",
-        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
+        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
       });
+      await user.save();
+    } else if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
+      user.isAdmin = true;
       await user.save();
     }
 
