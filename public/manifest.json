@@ -1,0 +1,16 @@
+{
+  "short_name": "VITConnect",
+  "name": "VITConnect Student Ecosystem",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0B0F19",
+  "theme_color": "#10B981",
+  "display": "standalone",
+  "orientation": "portrait"
+}
