@@ -1,4 +1,4 @@
-const CACHE_NAME = "vitconnect-cache-v1";
+const CACHE_NAME = "vitconnect-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
@@ -30,16 +30,18 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Fetch Event
+// Fetch Event - Network First Strategy
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
 
+  // Avoid caching API requests or external OAuth redirect requests
+  if (e.request.url.includes("/api/") || e.request.url.includes("github.com") || e.request.url.includes("google.com")) {
+    return;
+  }
+
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(e.request).then((networkResponse) => {
+    fetch(e.request)
+      .then((networkResponse) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
           return networkResponse;
         }
@@ -48,11 +50,16 @@ self.addEventListener("fetch", (e) => {
           cache.put(e.request, responseToCache);
         });
         return networkResponse;
-      }).catch(() => {
-        if (e.request.mode === "navigate") {
-          return caches.match("/index.html");
-        }
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(e.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          if (e.request.mode === "navigate") {
+            return caches.match("/index.html");
+          }
+        });
+      })
   );
 });
