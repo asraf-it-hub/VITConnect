@@ -227,6 +227,72 @@ export const AppProvider = ({ children }) => {
     return login("aditya.vardhan2024@vitap.ac.in", "dummy-google", "google");
   };
 
+  const loginWithGoogleOauth = async (idToken) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("vitconnect_token", data.token);
+        setCurrentUser(data.user);
+        addNotification({
+          type: "system",
+          text: `Welcome, ${data.user.name}! Successfully signed in via Google.`
+        });
+        return data.user;
+      } else {
+        const errData = await res.json();
+        console.error("Google Auth failed:", errData.msg);
+        addNotification({
+          type: "system",
+          text: `Google Sign-In failed: ${errData.msg || "Invalid token"}`
+        });
+      }
+    } catch (e) {
+      console.error("Google Auth connection error:", e);
+      addNotification({
+        type: "system",
+        text: "Could not connect to authentication server."
+      });
+    }
+  };
+
+  const loginWithGithubOauth = async (code) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/github`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("vitconnect_token", data.token);
+        setCurrentUser(data.user);
+        addNotification({
+          type: "system",
+          text: `Welcome, ${data.user.name}! Successfully signed in via GitHub.`
+        });
+        return data.user;
+      } else {
+        const errData = await res.json();
+        console.error("GitHub Auth failed:", errData.msg);
+        addNotification({
+          type: "system",
+          text: `GitHub Sign-In failed: ${errData.msg || "Invalid code"}`
+        });
+      }
+    } catch (e) {
+      console.error("GitHub Auth connection error:", e);
+      addNotification({
+        type: "system",
+        text: "Could not connect to authentication server."
+      });
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("vitconnect_token");
     localStorage.removeItem("vitconnect_user");
@@ -469,6 +535,8 @@ export const AppProvider = ({ children }) => {
         users,
         login,
         loginWithGoogle,
+        loginWithGoogleOauth,
+        loginWithGithubOauth,
         logout,
         addListing,
         deleteListing,

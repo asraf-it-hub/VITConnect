@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, AlertTriangle, CheckCircle, Flag, X } from "lucide-react";
 
 function AppContent() {
-  const { currentUser, reportItem } = useContext(AppContext);
+  const { currentUser, reportItem, loginWithGithubOauth } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState("home");
   
   // Modals state
@@ -62,6 +62,33 @@ function AppContent() {
 
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  // Intercept GitHub callback code in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    let code = params.get("code");
+
+    if (!code && window.location.hash.includes("code=")) {
+      const hashQuery = window.location.hash.split("?")[1] || window.location.hash.split("#")[1];
+      if (hashQuery) {
+        const hashParams = new URLSearchParams(hashQuery);
+        code = hashParams.get("code");
+      }
+    }
+
+    if (code) {
+      // Clear query params to make URL clean
+      const cleanSearch = window.location.search.replace(/[?&]code=[^&]*/, "").replace(/^&/, "?");
+      let cleanHash = window.location.hash;
+      if (cleanHash.includes("code=")) {
+        cleanHash = cleanHash.split("?")[0];
+      }
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + cleanSearch + cleanHash;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      loginWithGithubOauth(code);
+    }
+  }, [loginWithGithubOauth]);
 
   // Quick Action triggers from Dashboard
   const handleQuickAction = (actionType) => {
