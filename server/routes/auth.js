@@ -19,8 +19,8 @@ router.post("/login", async (req, res) => {
         name: name || email.split("@")[0].split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
         email,
         photo: photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        department: department || "Computer Science & Engineering (CSE)",
-        year: year || "1st Year",
+        department: department || "",
+        year: year || "",
         bio: bio || "VIT-AP Student. Connect to buy or sell items.",
         isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
       });
@@ -160,8 +160,8 @@ router.post("/google", async (req, res) => {
         name,
         email,
         photo: picture || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        department: "Computer Science & Engineering (CSE)",
-        year: "1st Year",
+        department: "",
+        year: "",
         bio: "VIT-AP Student. Logged in with Google OAuth.",
         isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
       });
@@ -277,8 +277,8 @@ router.post("/github", async (req, res) => {
         name: name || login,
         email,
         photo: avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        department: "Computer Science & Engineering (CSE)",
-        year: "1st Year",
+        department: "",
+        year: "",
         bio: "VIT-AP Student. Logged in with GitHub OAuth.",
         isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in"
       });

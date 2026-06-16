@@ -166,26 +166,46 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
             )}
           </div>
 
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-            {currentUser.department} • {currentUser.year}
-          </p>
+          {(currentUser.department || currentUser.year) ? (
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+              {currentUser.department}{currentUser.department && currentUser.year ? " • " : ""}{currentUser.year}
+            </p>
+          ) : (
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px", fontStyle: "italic" }}>
+              Department & Year not specified
+            </p>
+          )}
 
           <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", marginTop: "10px", lineHeight: "1.4" }}>
-            {currentUser.bio}
+            {currentUser.bio || "No bio added yet."}
           </p>
 
           {/* Verification / joined metadata */}
           <div style={{ display: "flex", gap: "16px", alignItems: "center", marginTop: "14px", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-              <Star size={14} fill="#f59e0b" style={{ color: "#f59e0b" }} />
-              <span style={{ fontWeight: "700" }}>{currentUser.rating}</span>
-              <span>({currentUser.reviewsCount} reviews)</span>
-            </div>
+            {currentUser.reviewsCount > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                <Star size={14} fill="#f59e0b" style={{ color: "#f59e0b" }} />
+                <span style={{ fontWeight: "700" }}>{currentUser.rating}</span>
+                <span>({currentUser.reviewsCount} reviews)</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                <Star size={14} style={{ color: "var(--text-muted)" }} />
+                <span>No reviews yet</span>
+              </div>
+            )}
 
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-              <CheckCircle size={14} style={{ color: "var(--accent)" }} />
-              <span>{currentUser.itemsSold} items sold</span>
-            </div>
+            {currentUser.itemsSold > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                <CheckCircle size={14} style={{ color: "var(--accent)" }} />
+                <span>{currentUser.itemsSold} items sold</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                <CheckCircle size={14} style={{ color: "var(--text-muted)" }} />
+                <span>No items sold yet</span>
+              </div>
+            )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               <Calendar size={14} />

@@ -14,11 +14,11 @@ const UserSchema = new mongoose.Schema({
   },
   department: {
     type: String,
-    default: "Computer Science & Engineering (CSE)"
+    default: ""
   },
   year: {
     type: String,
-    default: "1st Year"
+    default: ""
   },
   photo: {
     type: String,
