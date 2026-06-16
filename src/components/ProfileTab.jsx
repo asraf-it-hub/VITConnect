@@ -180,24 +180,36 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
               </span>
             )}
             {currentUser.badge && (
-               <span style={{
-                 background: currentUser.badge === "Verified Student" ? "rgba(16, 185, 129, 0.15)" :
-                             currentUser.badge === "Trusted Seller" ? "rgba(245, 158, 11, 0.15)" :
-                             currentUser.badge === "Student Ambassador" ? "rgba(59, 130, 246, 0.15)" :
-                             "rgba(139, 92, 246, 0.15)",
-                 color: currentUser.badge === "Verified Student" ? "#10b981" :
-                        currentUser.badge === "Trusted Seller" ? "#f59e0b" :
-                        currentUser.badge === "Student Ambassador" ? "#3b82f6" :
-                        "#8b5cf6",
-                 fontSize: "0.65rem",
-                 fontWeight: "700",
-                 padding: "2px 6px",
-                 borderRadius: "4px",
-                 display: "inline-flex",
-                 alignItems: "center"
-               }}>
-                 {currentUser.badge.toUpperCase()}
-               </span>
+               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                 <span style={{
+                   background: currentUser.badge === "Verified Student" ? "rgba(16, 185, 129, 0.15)" :
+                               currentUser.badge === "Trusted Seller" ? "rgba(245, 158, 11, 0.15)" :
+                               currentUser.badge === "Student Ambassador" ? "rgba(59, 130, 246, 0.15)" :
+                               "rgba(139, 92, 246, 0.15)",
+                   color: currentUser.badge === "Verified Student" ? "#10b981" :
+                          currentUser.badge === "Trusted Seller" ? "#f59e0b" :
+                          currentUser.badge === "Student Ambassador" ? "#3b82f6" :
+                          "#8b5cf6",
+                   fontSize: "0.65rem",
+                   fontWeight: "700",
+                   padding: "2px 6px",
+                   borderRadius: "4px",
+                   display: "inline-flex",
+                   alignItems: "center"
+                 }}>
+                   {currentUser.badge.toUpperCase()}
+                 </span>
+                 <span style={{
+                   fontSize: "0.7rem",
+                   color: "#10b981",
+                   fontWeight: "600",
+                   display: "inline-flex",
+                   alignItems: "center",
+                   gap: "2px"
+                 }}>
+                   (✓ Approved by Admin)
+                 </span>
+               </div>
              )}
           </div>
 

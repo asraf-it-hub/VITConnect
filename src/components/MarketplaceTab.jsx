@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpenReport }) {
-  const { listings, savedItems, toggleSaveItem, currentUser, reportItem } = useContext(AppContext);
+  const { listings, savedItems, toggleSaveItem, currentUser, reportItem, users } = useContext(AppContext);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [sortBy, setSortBy] = useState("newest"); // price-asc, price-desc, newest, popular
   const [showFilters, setShowFilters] = useState(false);
@@ -357,7 +357,27 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  <span>By {item.sellerName}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    By {item.sellerName}
+                    {(() => {
+                      const sel = users.find(u => u.id === item.sellerId || u._id === item.sellerId);
+                      return sel?.badge ? (
+                        <span
+                          title={`${sel.badge} (Approved by Admin)`}
+                          style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: sel.badge === "Verified Student" ? "#10b981" :
+                                        sel.badge === "Trusted Seller" ? "#f59e0b" :
+                                        sel.badge === "Student Ambassador" ? "#3b82f6" :
+                                        "#8b5cf6",
+                            display: "inline-block"
+                          }}
+                        />
+                      ) : null;
+                    })()}
+                  </span>
                   <span>{item.postedTime}</span>
                 </div>
                 <div style={{
@@ -578,9 +598,40 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                       style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover" }}
                     />
                     <div>
-                      <h4 style={{ fontSize: "1rem", fontWeight: "600" }}>{selectedProduct.sellerName}</h4>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                        {selectedProduct.sellerDept} ({selectedProduct.sellerYear})
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <h4 style={{ fontSize: "1rem", fontWeight: "600" }}>{selectedProduct.sellerName}</h4>
+                        {(() => {
+                          const sel = users.find(u => u.id === selectedProduct.sellerId || u._id === selectedProduct.sellerId);
+                          return sel?.badge ? (
+                            <span style={{
+                              background: sel.badge === "Verified Student" ? "rgba(16, 185, 129, 0.15)" :
+                                          sel.badge === "Trusted Seller" ? "rgba(245, 158, 11, 0.15)" :
+                                          sel.badge === "Student Ambassador" ? "rgba(59, 130, 246, 0.15)" :
+                                          "rgba(139, 92, 246, 0.15)",
+                              color: sel.badge === "Verified Student" ? "#10b981" :
+                                     sel.badge === "Trusted Seller" ? "#f59e0b" :
+                                     sel.badge === "Student Ambassador" ? "#3b82f6" :
+                                     "#8b5cf6",
+                              fontSize: "0.65rem",
+                              fontWeight: "700",
+                              padding: "2px 6px",
+                              borderRadius: "4px"
+                            }}>
+                              {sel.badge.toUpperCase()}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
+                        <span>{selectedProduct.sellerDept} ({selectedProduct.sellerYear})</span>
+                        {(() => {
+                          const sel = users.find(u => u.id === selectedProduct.sellerId || u._id === selectedProduct.sellerId);
+                          return sel?.badge ? (
+                            <span style={{ color: "#10b981", fontWeight: "600" }}>
+                              • Approved by Admin
+                            </span>
+                          ) : null;
+                        })()}
                       </p>
                       {/* Seller Trust Rating */}
                       <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>

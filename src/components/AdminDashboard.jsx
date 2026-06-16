@@ -230,7 +230,7 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {users.map(u => (
-                  <tr key={u.id} style={{ borderBottom: "1px solid var(--border-color)", opacity: u.isAdmin ? 0.8 : 1 }}>
+                  <tr key={u.id || u._id} style={{ borderBottom: "1px solid var(--border-color)", opacity: u.isAdmin ? 0.8 : 1 }}>
                     <td style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "10px" }}>
                       <img src={u.photo} alt={u.name} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
                       <span style={{ fontWeight: "600" }}>{u.name}</span>
@@ -241,7 +241,7 @@ export default function AdminDashboard() {
                     <td style={{ padding: "16px 20px" }}>
                        <select
                          value={u.badge || ""}
-                         onChange={(e) => assignUserBadge(u.id, e.target.value)}
+                         onChange={(e) => assignUserBadge(u.id || u._id, e.target.value)}
                          style={{
                            padding: "4px 8px",
                            borderRadius: "6px",
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
                         <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Protected</span>
                       ) : (
                         <button
-                          onClick={() => banUser(u.id)}
+                          onClick={() => banUser(u.id || u._id)}
                           className="btn btn-ghost"
                           style={{ color: "#ef4444", border: "none", padding: "6px", display: "flex", alignItems: "center", gap: "4px" }}
                         >
