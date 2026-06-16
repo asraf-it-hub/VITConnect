@@ -21,6 +21,11 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log("MongoDB Database connected successfully"))
   .catch((err) => console.error("Database connection failed:", err.message));
 
+// Root Message
+app.get("/", (req, res) => {
+  res.send("VITConnect API Server is online and running!");
+});
+
 // Basic Status Route
 app.get("/api/health", (req, res) => {
   res.json({ status: "healthy", timestamp: new Date() });
