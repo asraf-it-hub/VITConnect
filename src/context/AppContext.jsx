@@ -297,6 +297,9 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem("vitconnect_token");
     localStorage.removeItem("vitconnect_user");
     setCurrentUser(null);
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
   };
 
   // Listings CRUD
