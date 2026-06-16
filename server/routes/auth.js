@@ -136,6 +136,31 @@ router.delete("/users/:id", auth, async (req, res) => {
   }
 });
 
+// @route   PATCH api/auth/users/:id/badge
+// @desc    Assign verification badge to user
+// @access  Private (Admin only)
+router.patch("/users/:id/badge", auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ msg: "Access denied. Admin authorization required." });
+    }
+
+    const { badge } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: { badge } },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+  }
+});
+
 // @route   POST api/auth/google
 // @desc    Login/Register using Google ID Token
 // @access  Public

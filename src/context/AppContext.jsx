@@ -505,6 +505,21 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const assignUserBadge = async (userId, badge) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/users/${userId}/badge`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ badge })
+      });
+      if (res.ok) {
+        fetchUsersList();
+      }
+    } catch (e) {
+      console.error("Failed to assign badge:", e);
+    }
+  };
+
   const reportItem = async (itemType, itemId, reason) => {
     if (itemType !== "listings") return;
     try {
@@ -554,6 +569,7 @@ export const AppProvider = ({ children }) => {
         clearNotifications,
         updateProfile,
         banUser,
+        assignUserBadge,
         reportItem
       }}
     >

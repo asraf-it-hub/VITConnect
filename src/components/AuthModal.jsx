@@ -477,6 +477,35 @@ export default function AuthModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!email) {
+                        setError("Please enter your email address first");
+                        return;
+                      }
+                      if (!validateEmail(email)) {
+                        setError("Please use a valid @vitap.ac.in student email");
+                        return;
+                      }
+                      setError("");
+                      alert(`A simulated password reset link has been successfully dispatched to ${email}!`);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--accent)",
+                      fontSize: "0.75rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      padding: 0
+                    }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
                 <button
                   type="submit"
                   className="btn btn-primary"

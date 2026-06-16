@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { listings, requests, lostFound, users, banUser, deleteListing } = useContext(AppContext);
+  const { listings, requests, lostFound, users, banUser, deleteListing, assignUserBadge } = useContext(AppContext);
   const [adminSubTab, setAdminSubTab] = useState("reports"); // reports, users, listings
 
   // Filter reported listings
@@ -224,6 +224,7 @@ export default function AdminDashboard() {
                   <th style={{ padding: "16px 20px" }}>Email</th>
                   <th style={{ padding: "16px 20px" }}>Dept & Year</th>
                   <th style={{ padding: "16px 20px" }}>Ecosystem Rating</th>
+                  <th style={{ padding: "16px 20px" }}>Verification Badge</th>
                   <th style={{ padding: "16px 20px" }}>Action</th>
                 </tr>
               </thead>
@@ -237,6 +238,27 @@ export default function AdminDashboard() {
                     <td style={{ padding: "16px 20px", color: "var(--text-secondary)" }}>{u.email}</td>
                     <td style={{ padding: "16px 20px", color: "var(--text-secondary)" }}>{u.department} ({u.year})</td>
                     <td style={{ padding: "16px 20px", fontWeight: "700" }}>★ {u.rating}</td>
+                    <td style={{ padding: "16px 20px" }}>
+                       <select
+                         value={u.badge || ""}
+                         onChange={(e) => assignUserBadge(u.id, e.target.value)}
+                         style={{
+                           padding: "4px 8px",
+                           borderRadius: "6px",
+                           fontSize: "0.75rem",
+                           background: "var(--bg-surface-solid)",
+                           color: "var(--text-primary)",
+                           border: "1px solid var(--border-color)",
+                           outline: "none"
+                         }}
+                       >
+                         <option value="" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>None</option>
+                         <option value="Verified Student" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>Verified Student</option>
+                         <option value="Trusted Seller" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>Trusted Seller</option>
+                         <option value="Student Ambassador" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>Student Ambassador</option>
+                         <option value="Club Representative" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>Club Representative</option>
+                       </select>
+                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       {u.isAdmin ? (
                         <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Protected</span>

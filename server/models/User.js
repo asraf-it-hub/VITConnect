@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema({
   isAdmin: {
     type: Boolean,
     default: false
+  },
+  badge: {
+    type: String,
+    default: ""
   }
 });
 
