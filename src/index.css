@@ -205,6 +205,16 @@ body.dark .form-input {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
+/* Select dropdowns and option styling for light and dark modes */
+select {
+  background-color: var(--bg-surface-solid);
+  color: var(--text-primary);
+}
+select option {
+  background-color: var(--bg-surface-solid);
+  color: var(--text-primary);
+}
+
 /* Custom Buttons */
 .btn {
   display: inline-flex;
