@@ -43,6 +43,21 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState("");
 
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image size should be less than 2MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhoto(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const startEdit = () => {
     setName(currentUser.name);
     setDept(currentUser.department);
@@ -297,11 +312,19 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
                     className="form-input"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
+                    style={{
+                      background: "var(--bg-surface-solid)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-color)",
+                      padding: "8px 12px",
+                      borderRadius: "8px"
+                    }}
                   >
-                    <option value="1st Year">1st Year</option>
-                    <option value="2nd Year">2nd Year</option>
-                    <option value="3rd Year">3rd Year</option>
-                    <option value="4th Year">4th Year</option>
+                    <option value="" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>Select Year</option>
+                    <option value="1st Year" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>1st Year</option>
+                    <option value="2nd Year" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>2nd Year</option>
+                    <option value="3rd Year" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>3rd Year</option>
+                    <option value="4th Year" style={{ color: "var(--text-primary)", background: "var(--bg-surface-solid)" }}>4th Year</option>
                   </select>
                 </div>
               </div>
@@ -317,15 +340,25 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
                 />
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>Profile Photo URL</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={photo}
-                  onChange={(e) => setPhoto(e.target.value)}
-                />
-              </div>
+               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                 <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>Profile Photo</label>
+                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                   <img
+                     src={photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"}
+                     alt="Preview"
+                     style={{ width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border-color)" }}
+                   />
+                   <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                     <input
+                       type="file"
+                       accept="image/*"
+                       onChange={handlePhotoUpload}
+                       style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}
+                     />
+                     <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Supports JPG, PNG (Max 2MB)</span>
+                   </div>
+                 </div>
+               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button
