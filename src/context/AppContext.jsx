@@ -223,8 +223,8 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async () => {
-    return login("aditya.vardhan2024@vitap.ac.in", "dummy-google", "google");
+  const loginWithGoogle = async (email = "aditya.vardhan2024@vitap.ac.in") => {
+    return login(email, "dummy-google", "google");
   };
 
   const loginWithGoogleOauth = async (idToken) => {

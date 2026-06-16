@@ -134,9 +134,17 @@ export default function AuthModal({ isOpen, onClose }) {
   };
 
   const handleGoogleLogin = () => {
+    const emailInput = prompt("Enter student email for Google Demo Login:", "asraf.pothuganti2024@vitap.ac.in");
+    if (!emailInput) return; // User cancelled
+    
+    if (!validateEmail(emailInput)) {
+      setError("Please use a valid VIT-AP student email (@vitap.ac.in)");
+      return;
+    }
+
     setIsLoading(true);
     setTimeout(() => {
-      loginWithGoogle();
+      loginWithGoogle(emailInput);
       setIsLoading(false);
       handleClose();
     }, 1200);
