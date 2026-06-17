@@ -312,9 +312,14 @@ export const AppProvider = ({ children }) => {
       });
       if (res.ok) {
         fetchListings();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to add listing:", e);
+      return { success: false, error: "Connection error. Please try again." };
     }
   };
 
@@ -331,9 +336,14 @@ export const AppProvider = ({ children }) => {
           ...prev,
           listings: prev.listings.filter(iId => iId !== id)
         }));
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to delete listing:", e);
+      return { success: false, error: "Connection error." };
     }
   };
 
@@ -347,9 +357,14 @@ export const AppProvider = ({ children }) => {
       });
       if (res.ok) {
         fetchRequests();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to add request:", e);
+      return { success: false, error: "Connection error. Please try again." };
     }
   };
 
@@ -365,9 +380,14 @@ export const AppProvider = ({ children }) => {
           ...prev,
           requests: prev.requests.filter(rId => rId !== id)
         }));
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to delete request:", e);
+      return { success: false, error: "Connection error." };
     }
   };
 
@@ -381,9 +401,14 @@ export const AppProvider = ({ children }) => {
       });
       if (res.ok) {
         fetchLostFound();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to add lost found:", e);
+      return { success: false, error: "Connection error. Please try again." };
     }
   };
 
@@ -395,9 +420,14 @@ export const AppProvider = ({ children }) => {
       });
       if (res.ok) {
         fetchLostFound();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to resolve item:", e);
+      return { success: false, error: "Connection error." };
     }
   };
 
@@ -482,9 +512,14 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const user = await res.json();
         setCurrentUser(user);
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || `Server error: ${res.status}` };
       }
     } catch (e) {
       console.error("Failed to update profile:", e);
+      return { success: false, error: "Connection error. Please try again." };
     }
   };
 

@@ -28,6 +28,7 @@ export default function LostFoundTab({ onOpenChat, showCreateFormInitially = fal
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync prop state
   React.useEffect(() => {
@@ -36,7 +37,7 @@ export default function LostFoundTab({ onOpenChat, showCreateFormInitially = fal
     }
   }, [showCreateFormInitially]);
 
-  const handleCreatePost = (e) => {
+  const handleCreatePost = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -57,22 +58,28 @@ export default function LostFoundTab({ onOpenChat, showCreateFormInitially = fal
       return;
     }
 
-    addLostFound({
+    setIsSubmitting(true);
+    const result = await addLostFound({
       name,
       type,
       location,
       date,
       description
     });
+    setIsSubmitting(false);
 
-    // Reset Form
-    setName("");
-    setType("Lost");
-    setLocation("");
-    setDate("");
-    setDescription("");
-    setShowCreateForm(false);
-    if (onCloseCreateForm) onCloseCreateForm();
+    if (result && !result.success) {
+      setError(result.error || "Failed to publish report.");
+    } else {
+      // Reset Form
+      setName("");
+      setType("Lost");
+      setLocation("");
+      setDate("");
+      setDescription("");
+      setShowCreateForm(false);
+      if (onCloseCreateForm) onCloseCreateForm();
+    }
   };
 
   // Filter posts
@@ -263,8 +270,13 @@ export default function LostFoundTab({ onOpenChat, showCreateFormInitially = fal
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary" style={{ padding: "10px 24px", borderRadius: "10px" }}>
-                  <span>Publish Report</span>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ padding: "10px 24px", borderRadius: "10px", opacity: isSubmitting ? 0.7 : 1 }}
+                  disabled={isSubmitting}
+                >
+                  <span>{isSubmitting ? "Publishing..." : "Publish Report"}</span>
                 </button>
               </div>
             </form>

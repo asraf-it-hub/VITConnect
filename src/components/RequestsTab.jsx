@@ -26,6 +26,7 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
   const [deadline, setDeadline] = useState("This Week");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync prop state
   React.useEffect(() => {
@@ -34,7 +35,7 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
     }
   }, [showCreateFormInitially]);
 
-  const handleCreateRequest = (e) => {
+  const handleCreateRequest = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -51,20 +52,26 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
       return;
     }
 
-    addRequest({
+    setIsSubmitting(true);
+    const result = await addRequest({
       itemName,
       budget: parseFloat(budget),
       deadline,
       description
     });
+    setIsSubmitting(false);
 
-    // Reset Form
-    setItemName("");
-    setBudget("");
-    setDeadline("This Week");
-    setDescription("");
-    setShowCreateForm(false);
-    if (onCloseCreateForm) onCloseCreateForm();
+    if (result && !result.success) {
+      setError(result.error || "Failed to publish request.");
+    } else {
+      // Reset Form
+      setItemName("");
+      setBudget("");
+      setDeadline("This Week");
+      setDescription("");
+      setShowCreateForm(false);
+      if (onCloseCreateForm) onCloseCreateForm();
+    }
   };
 
   // Filter requests
@@ -211,9 +218,14 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button type="submit" className="btn btn-primary" style={{ padding: "10px 24px", borderRadius: "10px" }}>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ padding: "10px 24px", borderRadius: "10px", display: "flex", alignItems: "center", gap: "6px", opacity: isSubmitting ? 0.7 : 1 }}
+                  disabled={isSubmitting}
+                >
                   <Send size={16} />
-                  <span>Publish Request</span>
+                  <span>{isSubmitting ? "Publishing..." : "Publish Request"}</span>
                 </button>
               </div>
             </form>

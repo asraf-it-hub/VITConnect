@@ -11,7 +11,7 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Enable CORS
 app.use(cors({
-  origin: "*", // Allow all origins for Vercel deploy
+  origin: true, // Dynamically reflect request origin to support credentials: true
   credentials: true
 }));
 

@@ -14,6 +14,7 @@ export default function CreateListingModal({ isOpen, onClose }) {
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -53,7 +54,7 @@ export default function CreateListingModal({ isOpen, onClose }) {
     setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -74,7 +75,8 @@ export default function CreateListingModal({ isOpen, onClose }) {
       return;
     }
 
-    addListing({
+    setIsSubmitting(true);
+    const result = await addListing({
       name,
       price: parseFloat(price),
       category,
@@ -82,15 +84,20 @@ export default function CreateListingModal({ isOpen, onClose }) {
       description,
       images: images.length > 0 ? images : undefined
     });
+    setIsSubmitting(false);
 
-    // Reset State & Close
-    setName("");
-    setPrice("");
-    setCategory("Books");
-    setCondition("Excellent");
-    setDescription("");
-    setImages([]);
-    onClose();
+    if (result && !result.success) {
+      setError(result.error || "Failed to list product.");
+    } else {
+      // Reset State & Close
+      setName("");
+      setPrice("");
+      setCategory("Books");
+      setCondition("Excellent");
+      setDescription("");
+      setImages([]);
+      onClose();
+    }
   };
 
   return (
@@ -310,8 +317,13 @@ export default function CreateListingModal({ isOpen, onClose }) {
             </span>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "12px", borderRadius: "12px", marginTop: "8px" }}>
-            List Product
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            style={{ width: "100%", padding: "12px", borderRadius: "12px", marginTop: "8px", opacity: isSubmitting ? 0.7 : 1 }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Listing Product..." : "List Product"}
           </button>
         </form>
       </motion.div>

@@ -42,6 +42,8 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
   const [year, setYear] = useState("");
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
@@ -67,16 +69,23 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
     setIsEditing(true);
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateProfile({
+    setEditError("");
+    setIsSubmitting(true);
+    const result = await updateProfile({
       name,
       department: dept,
       year,
       bio,
       photo
     });
-    setIsEditing(false);
+    setIsSubmitting(false);
+    if (result && !result.success) {
+      setEditError(result.error || "Failed to update profile.");
+    } else {
+      setIsEditing(false);
+    }
   };
 
   // Filter items owned by current user
@@ -318,6 +327,19 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
             >
               <h3 style={{ fontSize: "1.2rem", fontWeight: "700" }}>Edit Student Profile</h3>
 
+              {editError && (
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.1)",
+                  color: "#ef4444",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  border: "1px solid rgba(239, 68, 68, 0.15)"
+                }}>
+                  {editError}
+                </div>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>Name</label>
                 <input
@@ -400,8 +422,13 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Changes
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </motion.form>
