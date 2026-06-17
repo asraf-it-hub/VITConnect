@@ -85,26 +85,38 @@ export default function Navigation({ activeTab, setActiveTab }) {
       }}>
         {/* Brand / Logo */}
         <div 
-          onClick={() => handleNavClick("home")}
           style={{ 
             display: "flex", 
             flexDirection: "column",
             alignItems: "center", 
-            gap: "10px", 
+            gap: "12px", 
             marginBottom: "32px", 
-            padding: "8px",
-            cursor: "pointer",
+            padding: "8px 0",
             userSelect: "none",
-            transition: "opacity var(--transition-fast)",
             textAlign: "center"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = 0.85}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
         >
           <img 
-            src="/VITConnectLogoEnhanced.png" 
+            onClick={() => handleNavClick("home")}
+            src="/FinalLogo.png" 
             alt="VITConnect Logo" 
-            style={{ height: "80px", width: "80px", borderRadius: "16px", objectFit: "cover", boxShadow: "var(--shadow-sm)" }} 
+            style={{ 
+              height: "80px", 
+              width: "80px", 
+              borderRadius: "16px", 
+              objectFit: "cover", 
+              boxShadow: "var(--shadow-sm)",
+              cursor: "pointer",
+              transition: "transform var(--transition-fast), opacity var(--transition-fast)"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.03)";
+              e.currentTarget.style.opacity = 0.9;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.opacity = 1;
+            }}
           />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{

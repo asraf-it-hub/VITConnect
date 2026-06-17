@@ -264,16 +264,16 @@ function AppContent() {
           boxShadow: "var(--shadow-sm)"
         }}>
           <div 
-            onClick={() => {
-              setActiveTab("home");
-              window.location.hash = "";
-            }}
-            style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: "8px", userSelect: "none" }}
           >
             <img 
-              src="/VITConnectLogoEnhanced.png" 
+              onClick={() => {
+                setActiveTab("home");
+                window.location.hash = "";
+              }}
+              src="/FinalLogo.png" 
               alt="VITConnect Logo" 
-              style={{ height: "36px", width: "36px", borderRadius: "8px", objectFit: "cover" }} 
+              style={{ height: "36px", width: "36px", borderRadius: "8px", objectFit: "cover", cursor: "pointer" }} 
             />
             <span style={{
               fontFamily: "var(--font-family-heading)",
