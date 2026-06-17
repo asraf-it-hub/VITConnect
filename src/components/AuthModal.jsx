@@ -266,8 +266,13 @@ export default function AuthModal({ isOpen, onClose, message }) {
         </button>
 
         {/* Brand details */}
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <h2 style={{ fontFamily: "var(--font-family-heading)", fontSize: "1.8rem", color: "var(--accent)" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          <img 
+            src="/VITConnectLogo.png" 
+            alt="VITConnect Logo" 
+            style={{ height: "46px", objectFit: "contain" }} 
+          />
+          <h2 style={{ fontFamily: "var(--font-family-heading)", fontSize: "1.6rem", color: "var(--accent)", margin: 0 }}>
             VITConnect
           </h2>
           {message ? (
@@ -277,14 +282,15 @@ export default function AuthModal({ isOpen, onClose, message }) {
               padding: "8px 12px",
               borderRadius: "8px",
               fontSize: "0.85rem",
-              marginTop: "8px",
+              marginTop: "4px",
               fontWeight: "600",
-              border: "1px solid rgba(16, 185, 129, 0.2)"
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              width: "100%"
             }}>
               {message}
             </div>
           ) : (
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "2px" }}>
               VIT-AP Student Authentication
             </p>
           )}

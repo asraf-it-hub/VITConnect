@@ -250,6 +250,43 @@ function AppContent() {
         margin: "0 auto",
         width: "100%"
       }}>
+        {/* Mobile Top Header (Hidden on Desktop) */}
+        <header className="mobile-top-header glass-panel" style={{
+          display: "none",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "12px 16px",
+          marginBottom: "20px",
+          background: "var(--glass-bg)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "var(--radius-md)",
+          boxShadow: "var(--shadow-sm)"
+        }}>
+          <div 
+            onClick={() => {
+              setActiveTab("home");
+              window.location.hash = "";
+            }}
+            style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
+          >
+            <img 
+              src="/VITConnectLogo.png" 
+              alt="VITConnect Logo" 
+              style={{ height: "30px", objectFit: "contain" }} 
+            />
+            <span style={{
+              fontFamily: "var(--font-family-heading)",
+              fontSize: "1.2rem",
+              fontWeight: "800",
+              color: "var(--accent)",
+              letterSpacing: "-0.03em"
+            }}>
+              VITConnect
+            </span>
+          </div>
+        </header>
+
         {/* Animated Page Transitions */}
         <AnimatePresence mode="wait">
           <motion.div

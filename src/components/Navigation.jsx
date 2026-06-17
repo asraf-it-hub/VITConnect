@@ -84,22 +84,41 @@ export default function Navigation({ activeTab, setActiveTab }) {
         zIndex: 50
       }}>
         {/* Brand / Logo */}
-        <div style={{ display: "flex", flexDirection: "column", marginBottom: "32px", padding: "0 8px" }}>
-          <span style={{
-            fontFamily: "var(--font-family-heading)",
-            fontSize: "1.5rem",
-            fontWeight: "800",
-            color: "var(--accent)",
-            letterSpacing: "-0.03em",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
-          }}>
-            VITConnect
-          </span>
-          <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "500", marginTop: "2px" }}>
-            Buy. Sell. Connect.
-          </span>
+        <div 
+          onClick={() => handleNavClick("home")}
+          style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "10px", 
+            marginBottom: "32px", 
+            padding: "4px 8px",
+            cursor: "pointer",
+            userSelect: "none",
+            transition: "opacity var(--transition-fast)"
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = 0.85}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
+        >
+          <img 
+            src="/VITConnectLogo.png" 
+            alt="VITConnect Logo" 
+            style={{ height: "36px", objectFit: "contain" }} 
+          />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{
+              fontFamily: "var(--font-family-heading)",
+              fontSize: "1.3rem",
+              fontWeight: "800",
+              color: "var(--accent)",
+              letterSpacing: "-0.03em",
+              lineHeight: "1.1"
+            }}>
+              VITConnect
+            </span>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "500", marginTop: "1px" }}>
+              Buy. Sell. Connect.
+            </span>
+          </div>
         </div>
 
         {/* Navigation Links */}

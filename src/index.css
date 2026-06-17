@@ -426,3 +426,10 @@ body.dark .btn-ghost:hover {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Responsive mobile top header */
+@media (max-width: 768px) {
+  .mobile-top-header {
+    display: flex !important;
+  }
+}
