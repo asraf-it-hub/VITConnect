@@ -271,9 +271,9 @@ function AppContent() {
             style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
           >
             <img 
-              src="/VITConnectLogo.png" 
+              src="/VITConnectLogoEnhanced.png" 
               alt="VITConnect Logo" 
-              style={{ height: "30px", objectFit: "contain" }} 
+              style={{ height: "36px", width: "36px", borderRadius: "8px", objectFit: "cover" }} 
             />
             <span style={{
               fontFamily: "var(--font-family-heading)",

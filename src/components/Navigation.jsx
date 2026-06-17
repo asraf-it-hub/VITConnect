@@ -88,34 +88,36 @@ export default function Navigation({ activeTab, setActiveTab }) {
           onClick={() => handleNavClick("home")}
           style={{ 
             display: "flex", 
+            flexDirection: "column",
             alignItems: "center", 
             gap: "10px", 
             marginBottom: "32px", 
-            padding: "4px 8px",
+            padding: "8px",
             cursor: "pointer",
             userSelect: "none",
-            transition: "opacity var(--transition-fast)"
+            transition: "opacity var(--transition-fast)",
+            textAlign: "center"
           }}
           onMouseEnter={(e) => e.currentTarget.style.opacity = 0.85}
           onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
         >
           <img 
-            src="/VITConnectLogo.png" 
+            src="/VITConnectLogoEnhanced.png" 
             alt="VITConnect Logo" 
-            style={{ height: "36px", objectFit: "contain" }} 
+            style={{ height: "80px", width: "80px", borderRadius: "16px", objectFit: "cover", boxShadow: "var(--shadow-sm)" }} 
           />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{
               fontFamily: "var(--font-family-heading)",
-              fontSize: "1.3rem",
+              fontSize: "1.4rem",
               fontWeight: "800",
               color: "var(--accent)",
               letterSpacing: "-0.03em",
-              lineHeight: "1.1"
+              lineHeight: "1.2"
             }}>
               VITConnect
             </span>
-            <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "500", marginTop: "1px" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "500", marginTop: "2px" }}>
               Buy. Sell. Connect.
             </span>
           </div>

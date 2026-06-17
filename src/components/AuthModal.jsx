@@ -266,11 +266,11 @@ export default function AuthModal({ isOpen, onClose, message }) {
         </button>
 
         {/* Brand details */}
-        <div style={{ textAlign: "center", marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
           <img 
-            src="/VITConnectLogo.png" 
+            src="/VITConnectLogoEnhanced.png" 
             alt="VITConnect Logo" 
-            style={{ height: "46px", objectFit: "contain" }} 
+            style={{ height: "80px", width: "80px", borderRadius: "16px", objectFit: "cover", boxShadow: "var(--shadow-sm)" }} 
           />
           <h2 style={{ fontFamily: "var(--font-family-heading)", fontSize: "1.6rem", color: "var(--accent)", margin: 0 }}>
             VITConnect
