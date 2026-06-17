@@ -37,11 +37,11 @@ const ListingSchema = new mongoose.Schema({
   },
   sellerDept: {
     type: String,
-    required: true
+    default: ""
   },
   sellerYear: {
     type: String,
-    required: true
+    default: ""
   },
   sellerPhoto: {
     type: String,

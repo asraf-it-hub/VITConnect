@@ -29,11 +29,11 @@ const RequestSchema = new mongoose.Schema({
   },
   requesterDept: {
     type: String,
-    required: true
+    default: ""
   },
   requesterYear: {
     type: String,
-    required: true
+    default: ""
   },
   postedTime: {
     type: String,
