@@ -187,6 +187,15 @@ export const AppProvider = ({ children }) => {
     }
   }, [currentUser]);
 
+  // Poll chats/messages every 3 seconds to enable real-time replies
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      fetchChats();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   // Sync notifications & savedItems
   useEffect(() => {
     localStorage.setItem("vitconnect_notifications", JSON.stringify(notifications));

@@ -14,6 +14,14 @@
   --accent-light: rgba(16, 185, 129, 0.1);
   --accent-hover: #059669;
   
+  /* WhatsApp theme colors - Light Mode */
+  --wa-chat-bg: #efeae2;
+  --wa-chat-pattern: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
+  --wa-bubble-mine-bg: #d9fdd3;
+  --wa-bubble-mine-color: #111b21;
+  --wa-bubble-other-bg: #ffffff;
+  --wa-bubble-other-color: #111b21;
+  
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
@@ -43,6 +51,14 @@ body.dark {
   --accent: #10b981; /* Emerald */
   --accent-light: rgba(16, 185, 129, 0.15);
   --accent-hover: #34d399;
+  
+  /* WhatsApp theme colors - Dark Mode */
+  --wa-chat-bg: #0b141a;
+  --wa-chat-pattern: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  --wa-bubble-mine-bg: #005c4b;
+  --wa-bubble-mine-color: #e9edef;
+  --wa-bubble-other-bg: #202c33;
+  --wa-bubble-other-color: #e9edef;
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.3);

@@ -318,10 +318,13 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
-              gap: "14px"
+              gap: "14px",
+              background: "var(--wa-chat-bg)",
+              backgroundImage: "var(--wa-chat-pattern)",
+              backgroundSize: "20px 20px"
             }}>
               {activeChat.messages.map((msg, index) => {
-                const isMine = msg.senderId === currentUser?.id;
+                const isMine = String(msg.senderId) === String(currentUser?.id || currentUser?._id);
                 return (
                   <div
                     key={index}
@@ -333,12 +336,11 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
                     }}
                   >
                     <div style={{
-                      background: isMine ? "var(--accent)" : "var(--glass-bg)",
-                      color: isMine ? "#ffffff" : "var(--text-primary)",
+                      background: isMine ? "var(--wa-bubble-mine-bg)" : "var(--wa-bubble-other-bg)",
+                      color: isMine ? "var(--wa-bubble-mine-color)" : "var(--wa-bubble-other-color)",
                       padding: "10px 16px",
-                      borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                      boxShadow: "var(--shadow-sm)",
-                      border: isMine ? "none" : "1px solid var(--glass-border)",
+                      borderRadius: isMine ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                      boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
                       fontSize: "0.95rem",
                       lineHeight: "1.45",
                       wordBreak: "break-word"
@@ -358,7 +360,7 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
                     }}>
                       <span>{msg.time.split(", ")[1] || msg.time}</span>
                       {isMine && (
-                        msg.read ? <CheckCheck size={12} style={{ color: "var(--accent)" }} /> : <Check size={12} />
+                        msg.read ? <CheckCheck size={12} style={{ color: "#53bdeb" }} /> : <Check size={12} />
                       )}
                     </div>
                   </div>
