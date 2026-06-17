@@ -11,16 +11,28 @@ import ProfileTab from "./components/ProfileTab";
 import AdminDashboard from "./components/AdminDashboard";
 import CreateListingModal from "./components/CreateListingModal";
 import AuthModal from "./components/AuthModal";
+import ProfilePromptModal from "./components/ProfilePromptModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, AlertTriangle, CheckCircle, Flag, X } from "lucide-react";
 
 function AppContent() {
-  const { currentUser, reportItem, loginWithGithubOauth } = useContext(AppContext);
+  const {
+    currentUser,
+    reportItem,
+    loginWithGithubOauth,
+    isAuthModalOpen,
+    authModalMessage,
+    isProfilePromptOpen,
+    openAuthModal,
+    closeAuthModal,
+    openProfilePrompt,
+    closeProfilePrompt,
+    isProfileIncomplete
+  } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState("home");
   
   // Modals state
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   // Form overrides (to open forms directly from dashboard quick actions)
@@ -94,7 +106,12 @@ function AppContent() {
   // Quick Action triggers from Dashboard
   const handleQuickAction = (actionType) => {
     if (!currentUser) {
-      setIsAuthModalOpen(true);
+      openAuthModal("Please login to proceed");
+      return;
+    }
+
+    if (isProfileIncomplete(currentUser)) {
+      openProfilePrompt();
       return;
     }
 
@@ -114,7 +131,12 @@ function AppContent() {
   // Open Chat directly from listings/requests
   const handleOpenChat = (recipientId, productContext) => {
     if (!currentUser) {
-      setIsAuthModalOpen(true);
+      openAuthModal("Please login to proceed");
+      return;
+    }
+
+    if (isProfileIncomplete(currentUser)) {
+      openProfilePrompt();
       return;
     }
     
@@ -128,7 +150,7 @@ function AppContent() {
   // Open Report Modal
   const handleOpenReport = (type, id) => {
     if (!currentUser) {
-      setIsAuthModalOpen(true);
+      openAuthModal("Please login to proceed");
       return;
     }
     setReportTarget({ type, id });
@@ -252,7 +274,13 @@ function AppContent() {
 
       <AnimatePresence>
         {isAuthModalOpen && (
-          <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+          <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} message={authModalMessage} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isProfilePromptOpen && (
+          <ProfilePromptModal isOpen={isProfilePromptOpen} onClose={closeProfilePrompt} />
         )}
       </AnimatePresence>
 

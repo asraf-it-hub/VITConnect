@@ -74,7 +74,7 @@ router.get("/me", auth, async (req, res) => {
 // @desc    Update current user profile fields
 // @access  Private
 router.patch("/profile", auth, async (req, res) => {
-  const { name, department, year, bio, photo } = req.body;
+  const { name, department, year, bio, photo, mobile } = req.body;
 
   const updateFields = {};
   if (name) updateFields.name = name;
@@ -82,6 +82,7 @@ router.patch("/profile", auth, async (req, res) => {
   if (year) updateFields.year = year;
   if (bio) updateFields.bio = bio;
   if (photo) updateFields.photo = photo;
+  if (mobile !== undefined) updateFields.mobile = mobile;
 
   try {
     const user = await User.findByIdAndUpdate(

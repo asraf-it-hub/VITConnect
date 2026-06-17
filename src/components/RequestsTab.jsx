@@ -15,7 +15,17 @@ import {
 } from "lucide-react";
 
 export default function RequestsTab({ onOpenChat, showCreateFormInitially = false, onCloseCreateForm }) {
-  const { requests, addRequest, deleteRequest, currentUser, savedItems, toggleSaveItem } = useContext(AppContext);
+  const {
+    requests,
+    addRequest,
+    deleteRequest,
+    currentUser,
+    savedItems,
+    toggleSaveItem,
+    openAuthModal,
+    openProfilePrompt,
+    isProfileIncomplete
+  } = useContext(AppContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [maxBudget, setMaxBudget] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(showCreateFormInitially);
@@ -103,7 +113,17 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
 
         {!showCreateForm && (
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              if (!currentUser) {
+                openAuthModal("Please login to proceed");
+                return;
+              }
+              if (isProfileIncomplete(currentUser)) {
+                openProfilePrompt();
+                return;
+              }
+              setShowCreateForm(true);
+            }}
             className="btn btn-primary"
             style={{ borderRadius: "10px", display: "flex", alignItems: "center", gap: "6px" }}
           >

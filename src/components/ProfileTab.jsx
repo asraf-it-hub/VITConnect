@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -29,7 +29,9 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
     deleteListing,
     deleteRequest,
     updateProfile,
-    logout
+    logout,
+    profileEditTriggered,
+    setProfileEditTriggered
   } = useContext(AppContext);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -42,6 +44,7 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
   const [year, setYear] = useState("");
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState("");
+  const [mobile, setMobile] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -66,8 +69,16 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
     setYear(currentUser.year);
     setBio(currentUser.bio);
     setPhoto(currentUser.photo);
+    setMobile(currentUser.mobile || "");
     setIsEditing(true);
   };
+
+  useEffect(() => {
+    if (profileEditTriggered && currentUser) {
+      startEdit();
+      setProfileEditTriggered(false);
+    }
+  }, [profileEditTriggered, currentUser]);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -78,7 +89,8 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
       department: dept,
       year,
       bio,
-      photo
+      photo,
+      mobile
     });
     setIsSubmitting(false);
     if (result && !result.success) {
@@ -391,6 +403,18 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   style={{ resize: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>Mobile Number (10 digits for WhatsApp)</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="e.g. 9876543210"
+                  maxLength={10}
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
                 />
               </div>
 

@@ -51,6 +51,10 @@ const UserSchema = new mongoose.Schema({
   badge: {
     type: String,
     default: ""
+  },
+  mobile: {
+    type: String,
+    default: ""
   }
 }, {
   toJSON: { virtuals: true },

@@ -72,6 +72,7 @@ router.get("/", auth, async (req, res) => {
         recipientPhoto: counterUser.photo,
         recipientDept: counterUser.department,
         recipientYear: counterUser.year,
+        recipientMobile: counterUser.mobile || "",
         productContext: grp.productContext,
         messages: grp.messages,
         unreadCount

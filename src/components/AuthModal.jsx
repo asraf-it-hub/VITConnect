@@ -3,7 +3,7 @@ import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Phone, ShieldCheck, X, RefreshCw } from "lucide-react";
 
-export default function AuthModal({ isOpen, onClose }) {
+export default function AuthModal({ isOpen, onClose, message }) {
   const { login, loginWithGoogle, loginWithGoogleOauth, loginWithGithubOauth } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState("google"); // google, email, otp
   const [email, setEmail] = useState("");
@@ -270,9 +270,24 @@ export default function AuthModal({ isOpen, onClose }) {
           <h2 style={{ fontFamily: "var(--font-family-heading)", fontSize: "1.8rem", color: "var(--accent)" }}>
             VITConnect
           </h2>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-            VIT-AP Student Authentication
-          </p>
+          {message ? (
+            <div style={{
+              background: "var(--accent-light)",
+              color: "var(--accent)",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              fontSize: "0.85rem",
+              marginTop: "8px",
+              fontWeight: "600",
+              border: "1px solid rgba(16, 185, 129, 0.2)"
+            }}>
+              {message}
+            </div>
+          ) : (
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+              VIT-AP Student Authentication
+            </p>
+          )}
         </div>
 
         {/* Tab switchers */}

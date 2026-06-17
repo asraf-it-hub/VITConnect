@@ -107,6 +107,18 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
     return user?.photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80";
   };
 
+  const handleOpenWhatsApp = () => {
+    const recipientUser = users.find(u => u.id === activeChat?.recipientId);
+    const rawMobile = activeChat?.recipientMobile || recipientUser?.mobile || "";
+    const cleanMobile = rawMobile.replace(/\D/g, "");
+    if (!cleanMobile) {
+      alert("This user has not listed their mobile number yet.");
+      return;
+    }
+    const waNumber = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    window.open(`https://wa.me/${waNumber}`, "_blank");
+  };
+
   return (
     <div className="glass-panel" style={{
       display: "flex",
@@ -267,12 +279,12 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
 
               {/* Quick WhatsApp Link redirection */}
               <button
-                onClick={() => window.open(`https://wa.me/919876543210`, "_blank")}
+                onClick={handleOpenWhatsApp}
                 className="btn btn-ghost"
                 style={{ padding: "6px 12px", border: "none", display: "flex", gap: "6px", fontSize: "0.8rem" }}
               >
                 <PhoneCall size={14} style={{ color: "var(--accent)" }} />
-                <span>Call WhatsApp</span>
+                <span>Open WhatsApp</span>
               </button>
             </div>
 

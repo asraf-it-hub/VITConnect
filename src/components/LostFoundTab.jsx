@@ -16,7 +16,15 @@ import {
 } from "lucide-react";
 
 export default function LostFoundTab({ onOpenChat, showCreateFormInitially = false, onCloseCreateForm }) {
-  const { lostFound, addLostFound, resolveLostFound, currentUser } = useContext(AppContext);
+  const {
+    lostFound,
+    addLostFound,
+    resolveLostFound,
+    currentUser,
+    openAuthModal,
+    openProfilePrompt,
+    isProfileIncomplete
+  } = useContext(AppContext);
   const [activeFilter, setActiveFilter] = useState("All"); // All, Lost, Found
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(showCreateFormInitially);
@@ -118,7 +126,17 @@ export default function LostFoundTab({ onOpenChat, showCreateFormInitially = fal
 
         {!showCreateForm && (
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => {
+              if (!currentUser) {
+                openAuthModal("Please login to proceed");
+                return;
+              }
+              if (isProfileIncomplete(currentUser)) {
+                openProfilePrompt();
+                return;
+              }
+              setShowCreateForm(true);
+            }}
             className="btn btn-primary"
             style={{ borderRadius: "10px", display: "flex", alignItems: "center", gap: "6px" }}
           >

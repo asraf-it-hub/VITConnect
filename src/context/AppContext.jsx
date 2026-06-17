@@ -41,6 +41,35 @@ export const AppProvider = ({ children }) => {
   const [savedItems, setSavedItems] = useState({ listings: [], requests: [] });
   const [users, setUsers] = useState([]);
 
+  // Global Modal & Verification states
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMessage, setAuthModalMessage] = useState("");
+  const [isProfilePromptOpen, setIsProfilePromptOpen] = useState(false);
+  const [profileEditTriggered, setProfileEditTriggered] = useState(false);
+
+  const openAuthModal = (msg = "Please login to proceed") => {
+    setAuthModalMessage(msg);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+    setAuthModalMessage("");
+  };
+
+  const openProfilePrompt = () => {
+    setIsProfilePromptOpen(true);
+  };
+
+  const closeProfilePrompt = () => {
+    setIsProfilePromptOpen(false);
+  };
+
+  const isProfileIncomplete = (user) => {
+    if (!user) return false;
+    return !user.department || !user.year || !user.mobile;
+  };
+
   // Fetch initial profile if token exists
   const fetchProfile = async () => {
     const token = localStorage.getItem("vitconnect_token");
@@ -478,6 +507,10 @@ export const AppProvider = ({ children }) => {
 
   // Wishlist Actions
   const toggleSaveItem = (type, itemId) => {
+    if (!currentUser) {
+      openAuthModal("Please login to proceed");
+      return;
+    }
     setSavedItems(prev => {
       const list = prev[type] || [];
       const isSaved = list.includes(itemId);
@@ -614,7 +647,17 @@ export const AppProvider = ({ children }) => {
         updateProfile,
         banUser,
         assignUserBadge,
-        reportItem
+        reportItem,
+        isAuthModalOpen,
+        authModalMessage,
+        isProfilePromptOpen,
+        profileEditTriggered,
+        openAuthModal,
+        closeAuthModal,
+        openProfilePrompt,
+        closeProfilePrompt,
+        isProfileIncomplete,
+        setProfileEditTriggered
       }}
     >
       {children}
