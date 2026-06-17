@@ -194,9 +194,17 @@ router.post("/google", async (req, res) => {
         isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
       });
       await user.save();
-    } else if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
-      user.isAdmin = true;
-      await user.save();
+    } else {
+      // Update existing user's photo with Google's picture if currently default or empty
+      const defaultPhoto = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80";
+      if (picture && (!user.photo || user.photo === defaultPhoto)) {
+        user.photo = picture;
+        await user.save();
+      }
+      if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
+        user.isAdmin = true;
+        await user.save();
+      }
     }
 
     // Create JWT

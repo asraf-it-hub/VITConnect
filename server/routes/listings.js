@@ -23,6 +23,10 @@ router.get("/", async (req, res) => {
 router.post("/", auth, async (req, res) => {
   const { name, price, category, condition, description, images } = req.body;
 
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    return res.status(400).json({ msg: "Please upload at least one photo of the item." });
+  }
+
   try {
     const user = await User.findById(req.user.id);
     if (!user) {

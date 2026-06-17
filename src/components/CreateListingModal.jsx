@@ -74,6 +74,10 @@ export default function CreateListingModal({ isOpen, onClose }) {
       setError("Please add a brief description of the item.");
       return;
     }
+    if (images.length === 0) {
+      setError("Please upload at least one photo of the item.");
+      return;
+    }
 
     setIsSubmitting(true);
     const result = await addListing({
@@ -82,7 +86,7 @@ export default function CreateListingModal({ isOpen, onClose }) {
       category,
       condition,
       description,
-      images: images.length > 0 ? images : undefined
+      images
     });
     setIsSubmitting(false);
 
@@ -247,7 +251,7 @@ export default function CreateListingModal({ isOpen, onClose }) {
           {/* Photo Upload */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-              Product Images
+              Product Images *
             </label>
             
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
@@ -313,7 +317,7 @@ export default function CreateListingModal({ isOpen, onClose }) {
               </label>
             </div>
             <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
-              Upload up to 3 campus product screenshots. If empty, a default placeholder will be selected.
+              Upload up to 3 photos of the item. At least one image is required.
             </span>
           </div>
 
