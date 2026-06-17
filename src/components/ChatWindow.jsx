@@ -15,7 +15,7 @@ import {
   Paperclip
 } from "lucide-react";
 
-export default function ChatWindow({ initialActiveChatId }) {
+export default function ChatWindow({ initialActiveChatId, initialProductContext, onClearRedirect }) {
   const { conversations, currentUser, sendMessage, markChatAsRead, users } = useContext(AppContext);
   const [activeChatId, setActiveChatId] = useState(initialActiveChatId || null);
   const [typedMessage, setTypedMessage] = useState("");
@@ -26,8 +26,11 @@ export default function ChatWindow({ initialActiveChatId }) {
   useEffect(() => {
     if (initialActiveChatId) {
       setActiveChatId(initialActiveChatId);
+      if (onClearRedirect) {
+        onClearRedirect();
+      }
     }
-  }, [initialActiveChatId]);
+  }, [initialActiveChatId, onClearRedirect]);
 
   // Mark active chat as read
   useEffect(() => {
@@ -41,7 +44,38 @@ export default function ChatWindow({ initialActiveChatId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversations, activeChatId]);
 
-  const activeChat = conversations.find(chat => chat.recipientId === activeChatId);
+  // Look for existing conversation
+  let activeChat = conversations.find(chat => chat.recipientId === activeChatId);
+
+  // Create temporary placeholder chat if recipient is valid but no message history exists yet
+  const tempChat = (!activeChat && activeChatId && currentUser && activeChatId !== currentUser.id)
+    ? (() => {
+        const recipientUser = users.find(u => u.id === activeChatId);
+        if (recipientUser) {
+          return {
+            id: `temp_${activeChatId}`,
+            recipientId: recipientUser.id,
+            recipientName: recipientUser.name,
+            recipientDept: recipientUser.department || "",
+            recipientYear: recipientUser.year || "",
+            messages: [],
+            productContext: initialProductContext || null,
+            unreadCount: 0
+          };
+        }
+        return null;
+      })()
+    : null;
+
+  if (tempChat) {
+    activeChat = tempChat;
+  }
+
+  // Prepend temporary chat to sidebar list so it is selectable
+  const displayedConversations = [...conversations];
+  if (tempChat) {
+    displayedConversations.unshift(tempChat);
+  }
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -110,12 +144,12 @@ export default function ChatWindow({ initialActiveChatId }) {
         </div>
 
         <div style={{ flexGrow: 1, overflowY: "auto" }}>
-          {conversations.length === 0 ? (
+          {displayedConversations.length === 0 ? (
             <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)", fontSize: "0.85rem" }}>
               No active chats. Inquire about listings or requests to start chatting!
             </div>
           ) : (
-            conversations.map((chat) => {
+            displayedConversations.map((chat) => {
               const lastMsg = chat.messages[chat.messages.length - 1];
               const isUnread = chat.unreadCount > 0;
               const isSelected = activeChatId === chat.recipientId;

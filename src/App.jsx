@@ -29,6 +29,7 @@ function AppContent() {
 
   // Chat redirect state
   const [redirectChatRecipientId, setRedirectChatRecipientId] = useState(null);
+  const [redirectChatProductContext, setRedirectChatProductContext] = useState(null);
 
   // Spam reporting state
   const [reportTarget, setReportTarget] = useState({ type: "", id: "" });
@@ -119,6 +120,7 @@ function AppContent() {
     
     // Trigger chat window loading
     setRedirectChatRecipientId(recipientId);
+    setRedirectChatProductContext(productContext);
     setActiveTab("messages");
     window.location.hash = "messages";
   };
@@ -177,7 +179,16 @@ function AppContent() {
           />
         );
       case "messages":
-        return <ChatWindow initialActiveChatId={redirectChatRecipientId} />;
+        return (
+          <ChatWindow
+            initialActiveChatId={redirectChatRecipientId}
+            initialProductContext={redirectChatProductContext}
+            onClearRedirect={() => {
+              setRedirectChatRecipientId(null);
+              setRedirectChatProductContext(null);
+            }}
+          />
+        );
       case "notifications":
         return <NotificationsTab setActiveTab={setActiveTab} />;
       case "profile":
