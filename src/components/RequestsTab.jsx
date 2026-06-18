@@ -1,6 +1,7 @@
 import React, { useContext, useState } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatRelativeTime } from "../utils/dateFormatter";
 import {
   Search,
   MessageSquare,
@@ -334,7 +335,7 @@ export default function RequestsTab({ onOpenChat, showCreateFormInitially = fals
                     <Calendar size={14} style={{ color: "var(--text-muted)" }} />
                     <span>Need before: <strong style={{ color: "#ef4444" }}>{req.deadline}</strong></span>
                   </div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{req.postedTime}</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{formatRelativeTime(req.createdAt, req.postedTime)}</span>
                 </div>
               </div>
 

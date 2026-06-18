@@ -533,6 +533,7 @@ export const AppProvider = ({ children }) => {
       type: notifData.type || "system",
       text: notifData.text,
       time: `Today, ${timestamp}`,
+      createdAt: Date.now(),
       read: false,
       link: notifData.link || "#"
     };

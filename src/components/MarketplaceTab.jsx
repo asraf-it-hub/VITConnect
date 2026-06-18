@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatRelativeTime } from "../utils/dateFormatter";
 import {
   Search,
   Filter,
@@ -378,7 +379,7 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                       ) : null;
                     })()}
                   </span>
-                  <span>{item.postedTime}</span>
+                  <span>{formatRelativeTime(item.createdAt, item.postedTime)}</span>
                 </div>
                 <div style={{
                   display: "flex",
@@ -559,7 +560,7 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                         Condition: {selectedProduct.condition}
                       </span>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                        Posted {selectedProduct.postedTime}
+                        Posted {formatRelativeTime(selectedProduct.createdAt, selectedProduct.postedTime)}
                       </span>
                     </div>
                   </div>

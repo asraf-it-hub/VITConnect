@@ -72,6 +72,34 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
   }
 
   // Prepend temporary chat to sidebar list so it is selectable
+  const formatSidebarTime = (msg) => {
+    if (!msg) return "";
+    if (!msg.createdAt) {
+      return msg.time?.split(", ")[1] || msg.time || "";
+    }
+    const date = new Date(msg.createdAt);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  const formatBubbleTime = (msg) => {
+    if (!msg) return "";
+    if (!msg.createdAt) {
+      return msg.time?.split(", ")[1] || msg.time || "";
+    }
+    const date = new Date(msg.createdAt);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const displayedConversations = [...conversations];
   if (tempChat) {
     displayedConversations.unshift(tempChat);
@@ -192,7 +220,7 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
                         {chat.recipientName}
                       </span>
                       <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        {lastMsg ? lastMsg.time.split(", ")[1] || lastMsg.time : ""}
+                        {lastMsg ? formatSidebarTime(lastMsg) : ""}
                       </span>
                     </div>
                     <p style={{
@@ -370,7 +398,7 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
                       marginTop: "4px",
                       justifyContent: isMine ? "flex-end" : "flex-start"
                     }}>
-                      <span>{msg.time.split(", ")[1] || msg.time}</span>
+                      <span>{formatBubbleTime(msg)}</span>
                       {isMine && (
                         msg.read ? <CheckCheck size={12} style={{ color: "#53bdeb" }} /> : <Check size={12} />
                       )}

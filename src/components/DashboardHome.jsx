@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
+import { formatRelativeTime } from "../utils/dateFormatter";
 import {
   Search,
   PlusCircle,
@@ -319,7 +320,7 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
                   </h4>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                     <span>By {item.sellerName.split(" ")[0]}</span>
-                    <span>{item.postedTime}</span>
+                    <span>{formatRelativeTime(item.createdAt, item.postedTime)}</span>
                   </div>
                   <div style={{
                     display: "flex",
@@ -403,7 +404,7 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
                   <span style={{ fontSize: "1.1rem", fontWeight: "700", color: "var(--accent)" }}>
                     ₹{req.budget}
                   </span>
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{req.postedTime}</span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{formatRelativeTime(req.createdAt, req.postedTime)}</span>
                 </div>
               </div>
             ))}
@@ -455,7 +456,7 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
                       📍 {item.location}
                     </p>
                   </div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{item.postedTime}</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{formatRelativeTime(item.createdAt, item.postedTime)}</span>
                 </div>
               </div>
             ))}

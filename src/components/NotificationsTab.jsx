@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
+import { formatNotificationTime } from "../utils/dateFormatter";
 import {
   Bell,
   MessageSquare,
@@ -112,7 +113,7 @@ export default function NotificationsTab({ setActiveTab }) {
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
                   <Clock size={12} />
-                  <span>{notif.time}</span>
+                  <span>{formatNotificationTime(notif)}</span>
                 </div>
               </div>
 

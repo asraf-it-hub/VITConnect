@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatRelativeTime } from "../utils/dateFormatter";
 import {
   User,
   ShoppingBag,
@@ -562,7 +563,7 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
                       </h4>
                       
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{item.postedTime}</span>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{formatRelativeTime(item.createdAt, item.postedTime)}</span>
                         <button
                           onClick={() => deleteListing(item.id)}
                           className="btn btn-ghost"

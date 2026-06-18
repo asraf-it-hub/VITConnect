@@ -47,6 +47,7 @@ router.get("/", auth, async (req, res) => {
         senderId: msg.senderId.toString(),
         text: msg.text,
         time: msg.time,
+        createdAt: msg.createdAt,
         read: msg.read
       });
     }
