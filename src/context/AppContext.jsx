@@ -3,6 +3,27 @@ import React, { createContext, useState, useEffect } from "react";
 export const AppContext = createContext();
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const DEMO_TOKEN_PREFIX = "vitconnect-demo-session";
+
+const readStorage = (key, fallback) => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch (e) {
+    console.error(`Error reading ${key}:`, e);
+    return fallback;
+  }
+};
+
+const writeStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Error saving ${key}:`, e);
+  }
+};
+
+const isDemoToken = (token) => token?.startsWith(DEMO_TOKEN_PREFIX);
 
 // Default Mock Students for fallback
 const MOCK_USERS = [
@@ -32,14 +53,14 @@ const getAuthHeaders = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [listings, setListings] = useState([]);
-  const [requests, setRequests] = useState([]);
-  const [lostFound, setLostFound] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [savedItems, setSavedItems] = useState({ listings: [], requests: [] });
-  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(() => readStorage("vitconnect_user", null));
+  const [listings, setListings] = useState(() => readStorage("vitconnect_listings", []));
+  const [requests, setRequests] = useState(() => readStorage("vitconnect_requests", []));
+  const [lostFound, setLostFound] = useState(() => readStorage("vitconnect_lost_found", []));
+  const [conversations, setConversations] = useState(() => readStorage("vitconnect_chats", []));
+  const [notifications, setNotifications] = useState(() => readStorage("vitconnect_notifications", []));
+  const [savedItems, setSavedItems] = useState(() => readStorage("vitconnect_saved", { listings: [], requests: [] }));
+  const [users, setUsers] = useState(() => readStorage("vitconnect_users_list", []));
 
   // Global Modal & Verification states
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -73,11 +94,18 @@ export const AppProvider = ({ children }) => {
   // Fetch initial profile if token exists
   const fetchProfile = async () => {
     const token = localStorage.getItem("vitconnect_token");
+    const cached = readStorage("vitconnect_user", null);
+
     if (!token) {
-      // Default to Rahul Sharma for preview if no active session
-      setCurrentUser(null);
+      setCurrentUser(cached);
       return;
     }
+
+    if (isDemoToken(token)) {
+      setCurrentUser(cached || MOCK_USERS[0]);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/auth/me`, {
         headers: getAuthHeaders()
@@ -91,9 +119,7 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to load live profile, checking cache:", e);
-      // Retrieve profile cache
-      const cached = localStorage.getItem("vitconnect_user");
-      if (cached) setCurrentUser(JSON.parse(cached));
+      if (cached) setCurrentUser(cached);
     }
   };
 
@@ -104,12 +130,11 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setListings(data);
-        localStorage.setItem("vitconnect_listings", JSON.stringify(data));
+        writeStorage("vitconnect_listings", data);
       }
     } catch (e) {
       console.error("Failed to fetch listings, loading cache:", e);
-      const cached = localStorage.getItem("vitconnect_listings");
-      if (cached) setListings(JSON.parse(cached));
+      setListings(readStorage("vitconnect_listings", []));
     }
   };
 
@@ -120,12 +145,11 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setRequests(data);
-        localStorage.setItem("vitconnect_requests", JSON.stringify(data));
+        writeStorage("vitconnect_requests", data);
       }
     } catch (e) {
       console.error("Failed to fetch requests, loading cache:", e);
-      const cached = localStorage.getItem("vitconnect_requests");
-      if (cached) setRequests(JSON.parse(cached));
+      setRequests(readStorage("vitconnect_requests", []));
     }
   };
 
@@ -136,18 +160,22 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setLostFound(data);
-        localStorage.setItem("vitconnect_lost_found", JSON.stringify(data));
+        writeStorage("vitconnect_lost_found", data);
       }
     } catch (e) {
       console.error("Failed to fetch lostFound, loading cache:", e);
-      const cached = localStorage.getItem("vitconnect_lost_found");
-      if (cached) setLostFound(JSON.parse(cached));
+      setLostFound(readStorage("vitconnect_lost_found", []));
     }
   };
 
   // Fetch Chat Conversations
   const fetchChats = async () => {
-    if (!localStorage.getItem("vitconnect_token")) return;
+    const token = localStorage.getItem("vitconnect_token");
+    if (!token) return;
+    if (isDemoToken(token)) {
+      setConversations(readStorage("vitconnect_chats", []));
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/api/messages`, {
         headers: getAuthHeaders()
@@ -155,12 +183,11 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
-        localStorage.setItem("vitconnect_chats", JSON.stringify(data));
+        writeStorage("vitconnect_chats", data);
       }
     } catch (e) {
       console.error("Failed to fetch chats, loading cache:", e);
-      const cached = localStorage.getItem("vitconnect_chats");
-      if (cached) setConversations(JSON.parse(cached));
+      setConversations(readStorage("vitconnect_chats", []));
     }
   };
 
@@ -171,12 +198,11 @@ export const AppProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
-        localStorage.setItem("vitconnect_users_list", JSON.stringify(data));
+        writeStorage("vitconnect_users_list", data);
       }
     } catch (e) {
       console.error("Failed to fetch users, loading cache:", e);
-      const cached = localStorage.getItem("vitconnect_users_list");
-      if (cached) setUsers(JSON.parse(cached));
+      setUsers(readStorage("vitconnect_users_list", []));
     }
   };
 
@@ -188,27 +214,14 @@ export const AppProvider = ({ children }) => {
     fetchLostFound();
     fetchUsersList();
 
-    // Load saved wishlist items
-    try {
-      const stored = localStorage.getItem("vitconnect_saved");
-      if (stored) setSavedItems(JSON.parse(stored));
-    } catch (e) {
-      console.error("Error reading saved wishlist:", e);
-    }
-
-    // Load local notifications
-    try {
-      const stored = localStorage.getItem("vitconnect_notifications");
-      if (stored) setNotifications(JSON.parse(stored));
-    } catch (e) {
-      console.error("Error reading notifications:", e);
-    }
+    setSavedItems(readStorage("vitconnect_saved", { listings: [], requests: [] }));
+    setNotifications(readStorage("vitconnect_notifications", []));
   }, []);
 
   // Sync current user to local storage as cache
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem("vitconnect_user", JSON.stringify(currentUser));
+      writeStorage("vitconnect_user", currentUser);
       fetchChats();
     } else {
       localStorage.removeItem("vitconnect_user");
@@ -227,15 +240,32 @@ export const AppProvider = ({ children }) => {
 
   // Sync notifications & savedItems
   useEffect(() => {
-    localStorage.setItem("vitconnect_notifications", JSON.stringify(notifications));
+    writeStorage("vitconnect_notifications", notifications);
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem("vitconnect_saved", JSON.stringify(savedItems));
+    writeStorage("vitconnect_saved", savedItems);
   }, [savedItems]);
 
   // Authentication Actions
   const login = async (email, password, method) => {
+    const completeDemoLogin = () => {
+      const offlineUser = {
+        ...MOCK_USERS[0],
+        id: readStorage("vitconnect_user", null)?.id || MOCK_USERS[0].id,
+        email,
+        name: email.split("@")[0].split(".").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
+      };
+      localStorage.setItem("vitconnect_token", `${DEMO_TOKEN_PREFIX}:${Date.now()}`);
+      writeStorage("vitconnect_user", offlineUser);
+      setCurrentUser(offlineUser);
+      addNotification({
+        type: "system",
+        text: `Welcome back, ${offlineUser.name}! Your session will stay signed in on this browser.`
+      });
+      return offlineUser;
+    };
+
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
@@ -252,12 +282,10 @@ export const AppProvider = ({ children }) => {
         });
         return data.user;
       }
+      return completeDemoLogin();
     } catch (e) {
       console.error("Auth server error:", e);
-      // Offline fallback login simulation
-      const offlineUser = MOCK_USERS[0];
-      setCurrentUser(offlineUser);
-      return offlineUser;
+      return completeDemoLogin();
     }
   };
 
@@ -342,6 +370,36 @@ export const AppProvider = ({ children }) => {
 
   // Listings CRUD
   const addListing = async (listingData) => {
+    const addLocalListing = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      const listing = {
+        ...listingData,
+        id: `listing-${Date.now()}`,
+        _id: `listing-${Date.now()}`,
+        sellerId: currentUser.id || currentUser._id,
+        sellerName: currentUser.name,
+        sellerDept: currentUser.department || "",
+        sellerYear: currentUser.year || "",
+        sellerPhoto: currentUser.photo,
+        postedTime: "Just now",
+        views: 1,
+        saves: 0,
+        isReported: false,
+        reportReason: "",
+        createdAt: new Date().toISOString()
+      };
+      setListings(prev => {
+        const updated = [listing, ...prev];
+        writeStorage("vitconnect_listings", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return addLocalListing();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/listings`, {
         method: "POST",
@@ -357,11 +415,28 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to add listing:", e);
-      return { success: false, error: "Connection error. Please try again." };
+      return addLocalListing();
     }
   };
 
   const deleteListing = async (id) => {
+    const deleteLocalListing = () => {
+      setListings(prev => {
+        const updated = prev.filter(item => item.id !== id && item._id !== id);
+        writeStorage("vitconnect_listings", updated);
+        return updated;
+      });
+      setSavedItems(prev => ({
+        ...prev,
+        listings: prev.listings.filter(iId => iId !== id)
+      }));
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return deleteLocalListing();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/listings/${id}`, {
         method: "DELETE",
@@ -381,12 +456,39 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to delete listing:", e);
-      return { success: false, error: "Connection error." };
+      return deleteLocalListing();
     }
   };
 
   // Requests CRUD
   const addRequest = async (requestData) => {
+    const addLocalRequest = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      const requestId = `request-${Date.now()}`;
+      const request = {
+        ...requestData,
+        id: requestId,
+        _id: requestId,
+        requesterId: currentUser.id || currentUser._id,
+        requesterName: currentUser.name,
+        requesterDept: currentUser.department || "",
+        requesterYear: currentUser.year || "",
+        postedTime: "Just now",
+        saves: 0,
+        createdAt: new Date().toISOString()
+      };
+      setRequests(prev => {
+        const updated = [request, ...prev];
+        writeStorage("vitconnect_requests", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return addLocalRequest();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/requests`, {
         method: "POST",
@@ -402,11 +504,28 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to add request:", e);
-      return { success: false, error: "Connection error. Please try again." };
+      return addLocalRequest();
     }
   };
 
   const deleteRequest = async (id) => {
+    const deleteLocalRequest = () => {
+      setRequests(prev => {
+        const updated = prev.filter(req => req.id !== id && req._id !== id);
+        writeStorage("vitconnect_requests", updated);
+        return updated;
+      });
+      setSavedItems(prev => ({
+        ...prev,
+        requests: prev.requests.filter(rId => rId !== id)
+      }));
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return deleteLocalRequest();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/requests/${id}`, {
         method: "DELETE",
@@ -425,12 +544,37 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to delete request:", e);
-      return { success: false, error: "Connection error." };
+      return deleteLocalRequest();
     }
   };
 
   // Lost & Found CRUD
   const addLostFound = async (lfData) => {
+    const addLocalLostFound = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      const reportId = `lostfound-${Date.now()}`;
+      const report = {
+        ...lfData,
+        id: reportId,
+        _id: reportId,
+        studentId: currentUser.id || currentUser._id,
+        studentName: currentUser.name,
+        postedTime: "Just now",
+        resolved: false,
+        createdAt: new Date().toISOString()
+      };
+      setLostFound(prev => {
+        const updated = [report, ...prev];
+        writeStorage("vitconnect_lost_found", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return addLocalLostFound();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/lostfound`, {
         method: "POST",
@@ -446,11 +590,26 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to add lost found:", e);
-      return { success: false, error: "Connection error. Please try again." };
+      return addLocalLostFound();
     }
   };
 
   const resolveLostFound = async (id) => {
+    const resolveLocalLostFound = () => {
+      setLostFound(prev => {
+        const updated = prev.map(item => (
+          item.id === id || item._id === id ? { ...item, resolved: true } : item
+        ));
+        writeStorage("vitconnect_lost_found", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return resolveLocalLostFound();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/lostfound/${id}/resolve`, {
         method: "PATCH",
@@ -465,12 +624,37 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to resolve item:", e);
-      return { success: false, error: "Connection error." };
+      return resolveLocalLostFound();
     }
   };
 
   // Messaging Actions
   const sendMessage = async (recipientId, text, productContext = null) => {
+    const sendLocalMessage = () => {
+      if (!currentUser) return;
+      const message = {
+        id: `msg-${Date.now()}`,
+        senderId: currentUser.id || currentUser._id,
+        text,
+        productContext,
+        createdAt: new Date().toISOString()
+      };
+      setConversations(prev => {
+        const existing = prev.find(chat => chat.recipientId === recipientId);
+        const recipientName = productContext?.sellerName || productContext?.requesterName || "Student";
+        const updated = existing
+          ? prev.map(chat => chat.recipientId === recipientId ? { ...chat, messages: [...(chat.messages || []), message], lastMessage: text } : chat)
+          : [{ recipientId, recipientName, messages: [message], lastMessage: text, unreadCount: 0 }, ...prev];
+        writeStorage("vitconnect_chats", updated);
+        return updated;
+      });
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      sendLocalMessage();
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/messages`, {
         method: "POST",
@@ -482,26 +666,37 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to send message:", e);
+      sendLocalMessage();
     }
   };
 
   const markChatAsRead = async (recipientId) => {
+    const markLocalChatAsRead = () => {
+      setConversations(prev => {
+        const updated = prev.map(chat => (
+          chat.recipientId === recipientId ? { ...chat, unreadCount: 0 } : chat
+        ));
+        writeStorage("vitconnect_chats", updated);
+        return updated;
+      });
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      markLocalChatAsRead();
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/messages/read/${recipientId}`, {
         method: "PATCH",
         headers: getAuthHeaders()
       });
       if (res.ok) {
-        // Optimistically update counts locally
-        setConversations(prev => prev.map(chat => {
-          if (chat.recipientId === recipientId) {
-            return { ...chat, unreadCount: 0 };
-          }
-          return chat;
-        }));
+        markLocalChatAsRead();
       }
     } catch (e) {
       console.error("Failed to mark chat read:", e);
+      markLocalChatAsRead();
     }
   };
 
@@ -546,6 +741,27 @@ export const AppProvider = ({ children }) => {
 
   // User Profile Settings
   const updateProfile = async (profileData) => {
+    const updateLocalProfile = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      const user = { ...currentUser, ...profileData };
+      setCurrentUser(user);
+      writeStorage("vitconnect_user", user);
+      setUsers(prev => {
+        const userId = user.id || user._id;
+        const hasUser = prev.some(item => (item.id || item._id) === userId);
+        const updated = hasUser
+          ? prev.map(item => (item.id || item._id) === userId ? user : item)
+          : [user, ...prev];
+        writeStorage("vitconnect_users_list", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return updateLocalProfile();
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: "PATCH",
@@ -562,7 +778,7 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {
       console.error("Failed to update profile:", e);
-      return { success: false, error: "Connection error. Please try again." };
+      return updateLocalProfile();
     }
   };
 

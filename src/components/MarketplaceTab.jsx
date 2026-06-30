@@ -136,7 +136,7 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
               key={cat}
               onClick={() => setFilters(prev => ({ ...prev, category: cat }))}
               style={{
-                border: "none",
+                border: "1px solid var(--border-color)",
                 background: (filters.category === cat || (!filters.category && cat === "All")) ? "var(--accent)" : "var(--glass-bg)",
                 color: (filters.category === cat || (!filters.category && cat === "All")) ? "#ffffff" : "var(--text-secondary)",
                 padding: "8px 14px",
@@ -144,7 +144,6 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                 fontSize: "0.85rem",
                 fontWeight: "500",
                 cursor: "pointer",
-                border: "1px solid var(--border-color)",
                 whiteSpace: "nowrap"
               }}
             >

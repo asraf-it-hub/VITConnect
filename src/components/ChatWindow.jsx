@@ -12,7 +12,8 @@ import {
   ExternalLink,
   PhoneCall,
   User,
-  Paperclip
+  Paperclip,
+  X
 } from "lucide-react";
 
 export default function ChatWindow({ initialActiveChatId, initialProductContext, onClearRedirect }) {
@@ -273,14 +274,13 @@ export default function ChatWindow({ initialActiveChatId, initialProductContext,
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   onClick={() => setActiveChatId(null)}
-                  className="btn btn-ghost"
+                  className="btn btn-ghost chat-back-button-responsive"
                   style={{
                     padding: "6px",
                     border: "none",
                     borderRadius: "50%",
                     display: "flex"
                   }}
-                  className="chat-back-button-responsive"
                 >
                   <ArrowLeft size={20} />
                 </button>
