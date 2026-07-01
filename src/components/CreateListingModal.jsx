@@ -12,6 +12,9 @@ export default function CreateListingModal({ isOpen, onClose }) {
   const [condition, setCondition] = useState("Excellent");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState([]);
+  const [upiId, setUpiId] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [isQrUploading, setIsQrUploading] = useState(false);
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +73,15 @@ export default function CreateListingModal({ isOpen, onClose }) {
       setError("Please specify a valid selling price.");
       return;
     }
+    if (!upiId.trim()) {
+      setError("UPI ID is required for direct peer-to-peer payments.");
+      return;
+    }
+    const upiRegex = /^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+    if (!upiRegex.test(upiId.trim())) {
+      setError("Invalid UPI ID format. Correct format is name@bank (e.g. buyer@okaxis)");
+      return;
+    }
     if (!description.trim()) {
       setError("Please add a brief description of the item.");
       return;
@@ -86,7 +98,9 @@ export default function CreateListingModal({ isOpen, onClose }) {
       category,
       condition,
       description,
-      images
+      images,
+      upiId: upiId.trim(),
+      qrCode
     });
     setIsSubmitting(false);
 
@@ -100,6 +114,8 @@ export default function CreateListingModal({ isOpen, onClose }) {
       setCondition("Excellent");
       setDescription("");
       setImages([]);
+      setUpiId("");
+      setQrCode("");
       onClose();
     }
   };
@@ -230,6 +246,95 @@ export default function CreateListingModal({ isOpen, onClose }) {
               >
                 {conditions.map(cond => <option key={cond} value={cond}>{cond}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* UPI ID and Optional QR Code Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            {/* UPI ID */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                Your UPI ID (Required) *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. name@okaxis"
+                className="form-input"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+              />
+            </div>
+
+            {/* QR Code Upload */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                Optional UPI QR Code Image
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {qrCode ? (
+                  <div style={{ position: "relative", width: "38px", height: "38px", borderRadius: "4px", overflow: "hidden", border: "1px solid var(--border-color)" }}>
+                    <img src={qrCode} alt="QR Code Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button
+                      type="button"
+                      onClick={() => setQrCode("")}
+                      style={{
+                        position: "absolute",
+                        top: "1px",
+                        right: "1px",
+                        background: "rgba(239, 68, 68, 0.8)",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: "12px",
+                        height: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.5rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : null}
+                <label style={{
+                  flexGrow: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "8px",
+                  borderRadius: "8px",
+                  border: "1px dashed var(--border-color)",
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  color: "var(--text-secondary)",
+                  textAlign: "center"
+                }} className="glass-panel-hover">
+                  {isQrUploading ? "Loading.." : "Upload QR"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      setIsQrUploading(true);
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setQrCode(event.target.result);
+                        setIsQrUploading(false);
+                      };
+                      reader.onerror = () => {
+                        setError("Error loading QR Code image.");
+                        setIsQrUploading(false);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    style={{ display: "none" }}
+                    disabled={isQrUploading}
+                  />
+                </label>
+              </div>
             </div>
           </div>
 

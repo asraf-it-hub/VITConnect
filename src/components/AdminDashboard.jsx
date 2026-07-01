@@ -1,6 +1,6 @@
 import React, { useContext, useState } from "react";
 import { AppContext } from "../context/AppContext";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert,
   Users,
@@ -10,12 +10,14 @@ import {
   Check,
   UserX,
   AlertTriangle,
-  FileText
+  FileText,
+  X
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { listings, requests, lostFound, users, banUser, deleteListing, assignUserBadge } = useContext(AppContext);
-  const [adminSubTab, setAdminSubTab] = useState("reports"); // reports, users, listings
+  const { listings, requests, lostFound, users, banUser, deleteListing, assignUserBadge, orders, deleteOrder } = useContext(AppContext);
+  const [adminSubTab, setAdminSubTab] = useState("reports"); // reports, users, listings, orders
+  const [expandedScreenshot, setExpandedScreenshot] = useState(null);
 
   // Filter reported listings
   const reportedListings = listings.filter(l => l.isReported);
@@ -138,6 +140,22 @@ export default function AdminDashboard() {
           }}
         >
           All Listings ({totalListings})
+        </button>
+
+        <button
+          onClick={() => setAdminSubTab("orders")}
+          style={{
+            border: "none",
+            background: adminSubTab === "orders" ? "var(--bg-surface-solid)" : "transparent",
+            color: adminSubTab === "orders" ? "var(--accent)" : "var(--text-secondary)",
+            padding: "8px 16px",
+            fontSize: "0.85rem",
+            fontWeight: "600",
+            borderRadius: "8px",
+            cursor: "pointer"
+          }}
+        >
+          Order Audit ({orders.length})
         </button>
       </div>
 
@@ -317,7 +335,145 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+
+        {/* 4. Orders Audit Subtab */}
+        {adminSubTab === "orders" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {orders.length === 0 ? (
+              <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+                No orders have been placed in the ecosystem yet.
+              </div>
+            ) : (
+              <div className="glass-panel" style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(0,0,0,0.01)" }}>
+                      <th style={{ padding: "16px 20px" }}>Product</th>
+                      <th style={{ padding: "16px 20px" }}>Buyer</th>
+                      <th style={{ padding: "16px 20px" }}>Seller</th>
+                      <th style={{ padding: "16px 20px" }}>Price</th>
+                      <th style={{ padding: "16px 20px" }}>Transaction Info</th>
+                      <th style={{ padding: "16px 20px" }}>Status</th>
+                      <th style={{ padding: "16px 20px" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map(o => (
+                      <tr key={o.id || o._id} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                        <td style={{ padding: "16px 20px" }}>
+                          <span style={{ fontWeight: "600" }}>{o.productName}</span>
+                        </td>
+                        <td style={{ padding: "16px 20px" }}>{o.buyerName}</td>
+                        <td style={{ padding: "16px 20px" }}>{o.sellerName}</td>
+                        <td style={{ padding: "16px 20px", fontWeight: "700" }}>₹{o.amount}</td>
+                        <td style={{ padding: "16px 20px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <div>ID: <span style={{ fontFamily: "monospace" }}>{o.transactionId}</span></div>
+                            {o.screenshot && (
+                              <button
+                                onClick={() => setExpandedScreenshot(o.screenshot)}
+                                className="btn btn-ghost"
+                                style={{ padding: "0", border: "none", color: "var(--accent)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "2px" }}
+                              >
+                                <FileText size={12} />
+                                <span>Screenshot</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: "16px 20px" }}>
+                          <span style={{
+                            background: o.status === "Completed" ? "rgba(16, 185, 129, 0.1)" :
+                                        o.status === "Rejected" ? "rgba(239, 68, 68, 0.1)" :
+                                        "rgba(245, 158, 11, 0.1)",
+                            color: o.status === "Completed" ? "#10b981" :
+                                   o.status === "Rejected" ? "#ef4444" :
+                                   "#f59e0b",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600"
+                          }}>
+                            {o.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px 20px" }}>
+                          <button
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete/cancel this order?")) {
+                                await deleteOrder(o.id || o._id);
+                              }
+                            }}
+                            className="btn btn-ghost"
+                            style={{ color: "#ef4444", border: "none", padding: "6px" }}
+                            title="Delete Order"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Expanded Screenshot Modal */}
+      <AnimatePresence>
+        {expandedScreenshot && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(10, 15, 30, 0.4)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px"
+          }} onClick={() => setExpandedScreenshot(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-panel"
+              style={{
+                maxWidth: "480px",
+                width: "100%",
+                background: "var(--glass-bg)",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                position: "relative"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 style={{ fontWeight: "700" }}>Payment Screenshot Preview</h4>
+                <button
+                  onClick={() => setExpandedScreenshot(null)}
+                  className="btn btn-ghost"
+                  style={{ padding: "4px", borderRadius: "50%", border: "none" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <img
+                src={expandedScreenshot}
+                alt="Screenshot Detail"
+                style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "8px", border: "1px solid var(--border-color)" }}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

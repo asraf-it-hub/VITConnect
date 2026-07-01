@@ -16,7 +16,11 @@ import {
   Trash2,
   CheckCircle,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Check,
+  X,
+  AlertTriangle,
+  Image as ImageIcon
 } from "lucide-react";
 import AuthModal from "./AuthModal";
 
@@ -32,12 +36,17 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
     updateProfile,
     logout,
     profileEditTriggered,
-    setProfileEditTriggered
+    setProfileEditTriggered,
+    orders,
+    approveOrderPayment,
+    rejectOrderPayment
   } = useContext(AppContext);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState("listings"); // listings, requests, saved
+  const [activeSubTab, setActiveSubTab] = useState("listings"); // listings, requests, saved, purchases, sales
+  const [salesFilter, setSalesFilter] = useState("pending"); // pending, completed, rejected
+  const [expandedScreenshot, setExpandedScreenshot] = useState(null);
 
   // Edit fields
   const [name, setName] = useState("");
@@ -104,6 +113,15 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
   // Filter items owned by current user
   const ownListings = currentUser ? listings.filter(l => l.sellerId === currentUser.id) : [];
   const ownRequests = currentUser ? requests.filter(r => r.requesterId === currentUser.id) : [];
+  
+  // Filter buyer and seller orders
+  const buyerOrders = currentUser ? orders.filter(o => o.buyerId === currentUser.id) : [];
+  const sellerOrders = currentUser ? orders.filter(o => o.sellerId === currentUser.id) : [];
+
+  const pendingSales = sellerOrders.filter(o => o.status === "Pending Payment Verification");
+  const completedSales = sellerOrders.filter(o => o.status === "Completed");
+  const rejectedSales = sellerOrders.filter(o => o.status === "Rejected");
+  const activeSalesList = salesFilter === "pending" ? pendingSales : salesFilter === "completed" ? completedSales : rejectedSales;
 
   // Filter bookmarked items
   const bookmarkedListings = currentUser ? listings.filter(l => (savedItems?.listings || []).includes(l.id)) : [];
@@ -468,7 +486,9 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
         padding: "4px",
         borderRadius: "12px",
         border: "1px solid var(--border-color)",
-        width: "fit-content"
+        width: "fit-content",
+        flexWrap: "wrap",
+        gap: "4px"
       }}>
         <button
           onClick={() => setActiveSubTab("listings")}
@@ -500,6 +520,38 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
           }}
         >
           My Requests ({ownRequests.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab("purchases")}
+          style={{
+            border: "none",
+            background: activeSubTab === "purchases" ? "var(--bg-surface-solid)" : "transparent",
+            color: activeSubTab === "purchases" ? "var(--accent)" : "var(--text-secondary)",
+            padding: "8px 16px",
+            fontSize: "0.85rem",
+            fontWeight: "600",
+            borderRadius: "8px",
+            cursor: "pointer"
+          }}
+        >
+          Purchases ({buyerOrders.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab("sales")}
+          style={{
+            border: "none",
+            background: activeSubTab === "sales" ? "var(--bg-surface-solid)" : "transparent",
+            color: activeSubTab === "sales" ? "var(--accent)" : "var(--text-secondary)",
+            padding: "8px 16px",
+            fontSize: "0.85rem",
+            fontWeight: "600",
+            borderRadius: "8px",
+            cursor: "pointer"
+          }}
+        >
+          Sales Panel ({pendingSales.length > 0 ? `${pendingSales.length} Pending` : sellerOrders.length})
         </button>
 
         <button
@@ -738,7 +790,331 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
             </div>
           </div>
         )}
+
+        {/* Purchases Subtab (Buyer Dashboard) */}
+        {activeSubTab === "purchases" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {buyerOrders.length === 0 ? (
+              <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+                You have not placed any orders yet.
+              </div>
+            ) : (
+              buyerOrders.map(order => (
+                <div key={order.id || order._id} className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <h4 style={{ fontSize: "1.05rem", fontWeight: "700" }}>{order.productName}</h4>
+                      <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                        Seller: **{order.sellerName}** • Price: <strong style={{ color: "var(--accent)" }}>₹{order.amount}</strong>
+                      </p>
+                    </div>
+                    <span style={{
+                      background: order.status === "Completed" ? "rgba(16, 185, 129, 0.1)" :
+                                  order.status === "Rejected" ? "rgba(239, 68, 68, 0.1)" :
+                                  "rgba(245, 158, 11, 0.1)",
+                      color: order.status === "Completed" ? "#10b981" :
+                             order.status === "Rejected" ? "#ef4444" :
+                             "#f59e0b",
+                      padding: "4px 10px",
+                      borderRadius: "20px",
+                      fontSize: "0.75rem",
+                      fontWeight: "700"
+                    }}>
+                      {order.status}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.8rem", color: "var(--text-secondary)", alignItems: "center" }}>
+                    <div>
+                      <strong>Txn ID:</strong> <span style={{ fontFamily: "monospace" }}>{order.transactionId}</span>
+                    </div>
+                    <div>
+                      <strong>Submitted:</strong> {new Date(order.createdAt).toLocaleDateString()}
+                    </div>
+                    {order.screenshot ? (
+                      <button
+                        onClick={() => setExpandedScreenshot(order.screenshot)}
+                        className="btn btn-ghost"
+                        style={{ padding: "0", border: "none", color: "var(--accent)", display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem" }}
+                      >
+                        <ImageIcon size={14} />
+                        <span>View Screenshot</span>
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Order Tracking Timeline */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "10px",
+                    background: "rgba(0,0,0,0.01)",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-color)",
+                    position: "relative",
+                    overflowX: "auto"
+                  }}>
+                    {/* Timeline connection line */}
+                    <div style={{
+                      position: "absolute",
+                      left: "10%",
+                      right: "10%",
+                      top: "20px",
+                      height: "2px",
+                      background: "var(--border-color)",
+                      zIndex: 1
+                    }}></div>
+
+                    {/* Step 1: Reserved */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", zIndex: 2, flex: 1 }}>
+                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#10b981", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem" }}>
+                        ✓
+                      </div>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600" }}>Reserved</span>
+                    </div>
+
+                    {/* Step 2: Payment Submitted */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", zIndex: 2, flex: 1 }}>
+                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#10b981", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem" }}>
+                        ✓
+                      </div>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600" }}>Paid</span>
+                    </div>
+
+                    {/* Step 3: Seller Verification */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", zIndex: 2, flex: 1 }}>
+                      <div style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        background: order.status !== "Pending Payment Verification" ? "#10b981" : "#f59e0b",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.65rem"
+                      }}>
+                        {order.status !== "Pending Payment Verification" ? "✓" : "◯"}
+                      </div>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600", color: order.status === "Pending Payment Verification" ? "#f59e0b" : "var(--text-primary)" }}>
+                        Verifying
+                      </span>
+                    </div>
+
+                    {/* Step 4: Final Outcome */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", zIndex: 2, flex: 1 }}>
+                      <div style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        background: order.status === "Completed" ? "#10b981" :
+                                    order.status === "Rejected" ? "#ef4444" :
+                                    "var(--border-color)",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.65rem"
+                      }}>
+                        {order.status === "Completed" ? "✓" : order.status === "Rejected" ? "✕" : " "}
+                      </div>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "600" }}>
+                        {order.status === "Completed" ? "Completed" : order.status === "Rejected" ? "Rejected" : "Finished"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Sales Panel Subtab (Seller Dashboard) */}
+        {activeSubTab === "sales" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Sales Sub-Filters */}
+            <div style={{ display: "flex", gap: "10px", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px", overflowX: "auto" }}>
+              <button
+                onClick={() => setSalesFilter("pending")}
+                className="btn btn-ghost"
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "0.8rem",
+                  background: salesFilter === "pending" ? "rgba(245,158,11,0.08)" : "transparent",
+                  color: salesFilter === "pending" ? "#f59e0b" : "var(--text-secondary)",
+                  borderColor: salesFilter === "pending" ? "#f59e0b" : "transparent"
+                }}
+              >
+                Pending Verification ({pendingSales.length})
+              </button>
+              <button
+                onClick={() => setSalesFilter("completed")}
+                className="btn btn-ghost"
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "0.8rem",
+                  background: salesFilter === "completed" ? "rgba(16,185,129,0.08)" : "transparent",
+                  color: salesFilter === "completed" ? "#10b981" : "var(--text-secondary)",
+                  borderColor: salesFilter === "completed" ? "#10b981" : "transparent"
+                }}
+              >
+                Completed Sales ({completedSales.length})
+              </button>
+              <button
+                onClick={() => setSalesFilter("rejected")}
+                className="btn btn-ghost"
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "0.8rem",
+                  background: salesFilter === "rejected" ? "rgba(239,68,68,0.08)" : "transparent",
+                  color: salesFilter === "rejected" ? "#ef4444" : "var(--text-secondary)",
+                  borderColor: salesFilter === "rejected" ? "#ef4444" : "transparent"
+                }}
+              >
+                Rejected Payments ({rejectedSales.length})
+              </button>
+            </div>
+
+            {/* List */}
+            {activeSalesList.length === 0 ? (
+              <div className="glass-panel" style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+                No sales records found.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {activeSalesList.map(order => (
+                  <div key={order.id || order._id} className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                      <div>
+                        <h4 style={{ fontSize: "1.05rem", fontWeight: "700" }}>{order.productName}</h4>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                          Buyer: **{order.buyerName}** • Price: <strong style={{ color: "var(--accent)" }}>₹{order.amount}</strong>
+                        </p>
+                      </div>
+                      <span style={{
+                        background: order.status === "Completed" ? "rgba(16, 185, 129, 0.1)" :
+                                    order.status === "Rejected" ? "rgba(239, 68, 68, 0.1)" :
+                                    "rgba(245, 158, 11, 0.1)",
+                        color: order.status === "Completed" ? "#10b981" :
+                               order.status === "Rejected" ? "#ef4444" :
+                               "#f59e0b",
+                        padding: "4px 10px",
+                        borderRadius: "20px",
+                        fontSize: "0.75rem",
+                        fontWeight: "700"
+                      }}>
+                        {order.status}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.8rem", color: "var(--text-secondary)", alignItems: "center" }}>
+                      <div>
+                        <strong>Transaction ID:</strong> <span style={{ fontFamily: "monospace" }}>{order.transactionId}</span>
+                      </div>
+                      <div>
+                        <strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}
+                      </div>
+                      {order.screenshot ? (
+                        <button
+                          onClick={() => setExpandedScreenshot(order.screenshot)}
+                          className="btn btn-ghost"
+                          style={{ padding: "0", border: "none", color: "var(--accent)", display: "flex", alignItems: "center", gap: "4px", fontSize: "0.8rem" }}
+                        >
+                          <ImageIcon size={14} />
+                          <span>View Screenshot</span>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {order.status === "Pending Payment Verification" && (
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: "1px solid var(--border-color)", paddingTop: "14px" }}>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you want to REJECT this payment of ₹${order.amount}? The product reservation will be released.`)) {
+                              await rejectOrderPayment(order.id || order._id);
+                            }
+                          }}
+                          className="btn btn-ghost"
+                          style={{ color: "#ef4444", borderColor: "#ef4444", fontSize: "0.8rem", padding: "6px 12px" }}
+                        >
+                          Reject Payment
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you have RECEIVED the payment of ₹${order.amount} with Transaction ID ${order.transactionId}?`)) {
+                              await approveOrderPayment(order.id || order._id);
+                            }
+                          }}
+                          className="btn btn-primary"
+                          style={{ background: "#10b981", borderColor: "#10b981", fontSize: "0.8rem", padding: "6px 12px" }}
+                        >
+                          Approve Payment
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Expanded Screenshot Modal */}
+      <AnimatePresence>
+        {expandedScreenshot && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(10, 15, 30, 0.4)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px"
+          }} onClick={() => setExpandedScreenshot(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-panel"
+              style={{
+                maxWidth: "480px",
+                width: "100%",
+                background: "var(--glass-bg)",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                position: "relative"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 style={{ fontWeight: "700" }}>Payment Screenshot Preview</h4>
+                <button
+                  onClick={() => setExpandedScreenshot(null)}
+                  className="btn btn-ghost"
+                  style={{ padding: "4px", borderRadius: "50%", border: "none" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <img
+                src={expandedScreenshot}
+                alt="Screenshot Detail"
+                style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "8px", border: "1px solid var(--border-color)" }}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

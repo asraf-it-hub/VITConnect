@@ -9,6 +9,18 @@ const User = require("../models/User");
 // @access  Public
 router.get("/", async (req, res) => {
   try {
+    // Automatically release expired reservations
+    const now = new Date();
+    await Listing.updateMany(
+      {
+        status: "Reserved",
+        reservedUntil: { $ne: null, $lt: now }
+      },
+      {
+        $set: { status: "Available", reservedUntil: null, reservedBy: null }
+      }
+    );
+
     const listings = await Listing.find().sort({ createdAt: -1 });
     res.json(listings);
   } catch (err) {
@@ -21,7 +33,16 @@ router.get("/", async (req, res) => {
 // @desc    Create a new listing
 // @access  Private
 router.post("/", auth, async (req, res) => {
-  const { name, price, category, condition, description, images } = req.body;
+  const { name, price, category, condition, description, images, upiId, qrCode } = req.body;
+
+  if (!upiId) {
+    return res.status(400).json({ msg: "UPI ID is required for direct peer-to-peer payments." });
+  }
+
+  const upiRegex = /^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+  if (!upiRegex.test(upiId)) {
+    return res.status(400).json({ msg: "Invalid UPI ID format. Correct format is name@bank" });
+  }
 
   if (!images || !Array.isArray(images) || images.length === 0) {
     return res.status(400).json({ msg: "Please upload at least one photo of the item." });
@@ -40,12 +61,15 @@ router.post("/", auth, async (req, res) => {
       condition,
       description,
       images,
+      upiId,
+      qrCode: qrCode || "",
       sellerId: req.user.id,
       sellerName: user.name,
       sellerDept: user.department,
       sellerYear: user.year,
       sellerPhoto: user.photo,
-      postedTime: "Just now"
+      postedTime: "Just now",
+      status: "Available"
     });
 
     const listing = await newListing.save();

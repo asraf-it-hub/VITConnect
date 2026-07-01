@@ -59,6 +59,28 @@ const ListingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  upiId: {
+    type: String,
+    default: ""
+  },
+  qrCode: {
+    type: String,
+    default: ""
+  },
+  status: {
+    type: String,
+    enum: ["Available", "Reserved", "Sold"],
+    default: "Available"
+  },
+  reservedUntil: {
+    type: Date,
+    default: null
+  },
+  reservedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
   isReported: {
     type: Boolean,
     default: false

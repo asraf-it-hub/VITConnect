@@ -34,6 +34,7 @@ app.get("/api/health", (req, res) => {
 // Mount Routers
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/listings", require("./routes/listings"));
+app.use("/api/orders", require("./routes/orders"));
 app.use("/api/requests", require("./routes/requests"));
 app.use("/api/lostfound", require("./routes/lostfound"));
 app.use("/api/messages", require("./routes/messages"));

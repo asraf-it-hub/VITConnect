@@ -21,12 +21,81 @@ import {
   ArrowUpDown
 } from "lucide-react";
 
+function ReservationTimer({ reservedUntil, onExpire }) {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const diff = new Date(reservedUntil) - new Date();
+      return diff > 0 ? Math.floor(diff / 1000) : 0;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const interval = setInterval(() => {
+      const left = calculateTimeLeft();
+      setTimeLeft(left);
+      if (left <= 0) {
+        clearInterval(interval);
+        if (onExpire) onExpire();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [reservedUntil, onExpire]);
+
+  if (timeLeft <= 0) {
+    return <span style={{ color: "#ef4444", fontWeight: "700" }}>Expired</span>;
+  }
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  return (
+    <span style={{ color: "#f59e0b", fontWeight: "700" }}>
+      {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+    </span>
+  );
+}
+
 export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpenReport }) {
-  const { listings, savedItems, toggleSaveItem, currentUser, reportItem, users } = useContext(AppContext);
+  const { listings, savedItems, toggleSaveItem, currentUser, reportItem, users, reserveProduct, submitOrderPayment, openAuthModal } = useContext(AppContext);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [sortBy, setSortBy] = useState("newest"); // price-asc, price-desc, newest, popular
   const [showFilters, setShowFilters] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  
+  // Direct checkout payment states
+  const [showConfirmReserve, setShowConfirmReserve] = useState(false);
+  const [isReserving, setIsReserving] = useState(false);
+  const [txId, setTxId] = useState("");
+  const [screenshot, setScreenshot] = useState("");
+  const [isScreenshotUploading, setIsScreenshotUploading] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const handleCopyUpi = (upi) => {
+    navigator.clipboard.writeText(upi).then(() => {
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2000);
+    });
+  };
+
+  const handleScreenshotUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsScreenshotUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setScreenshot(event.target.result);
+      setIsScreenshotUploading(false);
+    };
+    reader.onerror = () => {
+      alert("Error loading screenshot image.");
+      setIsScreenshotUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Read listing details if selected from dashboard
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -44,6 +113,10 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
   const closeDetail = () => {
     setSelectedProduct(null);
     setFilters(prev => ({ ...prev, selectedProductId: null }));
+    setShowConfirmReserve(false);
+    setTxId("");
+    setScreenshot("");
+    setCheckoutError("");
   };
 
   // Categories list
@@ -339,6 +412,26 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                   border: "1px solid rgba(16, 185, 129, 0.2)"
                 }}>
                   {item.category}
+                </span>
+                
+                {/* Direct payment status badge */}
+                <span style={{
+                  position: "absolute",
+                  bottom: "10px",
+                  left: "10px",
+                  background: item.status === "Sold" ? "#ef4444" :
+                              (item.status === "Reserved" && (!item.reservedUntil || new Date(item.reservedUntil) > new Date())) ? "#f59e0b" :
+                              "#10b981",
+                  color: "#ffffff",
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  fontWeight: "700",
+                  backdropFilter: "blur(4px)"
+                }}>
+                  {item.status === "Sold" ? "Sold" :
+                   (item.status === "Reserved" && (!item.reservedUntil || new Date(item.reservedUntil) > new Date())) ? "Reserved" :
+                   "Available"}
                 </span>
               </div>
               <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", flexGrow: 1 }}>
@@ -648,7 +741,7 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                       style={{ padding: "8px 16px", fontSize: "0.85rem" }}
                     >
                       <MessageSquare size={16} />
-                      <span>Chat in App</span>
+                      <span>Chat Seller</span>
                     </button>
                     <button
                       onClick={() => handleWhatsAppRedirect(selectedProduct)}
@@ -659,6 +752,297 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                       <span>WhatsApp</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Peer-to-Peer Payment and Reservation Panel */}
+                <div style={{
+                  borderTop: "1px solid var(--border-color)",
+                  borderBottom: "1px solid var(--border-color)",
+                  padding: "20px 0",
+                  marginTop: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  {(() => {
+                    if (!currentUser) {
+                      return (
+                        <div className="glass-panel" style={{ padding: "16px", background: "rgba(59, 130, 246, 0.05)", textAlign: "center" }}>
+                          <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+                            Sign in to buy this product directly from the seller.
+                          </p>
+                          <button
+                            onClick={() => openAuthModal("Sign in to buy this product")}
+                            className="btn btn-primary"
+                            style={{ marginTop: "10px", fontSize: "0.85rem" }}
+                          >
+                            Sign In to Buy
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    const isSeller = selectedProduct.sellerId === currentUser.id;
+
+                    if (isSeller) {
+                      return (
+                        <div className="glass-panel" style={{ padding: "16px", background: "rgba(16, 185, 129, 0.05)", textAlign: "center", border: "1px solid rgba(16, 185, 129, 0.1)" }}>
+                          <p style={{ fontSize: "0.9rem", fontWeight: "600", color: "#10b981" }}>
+                            This is your listing.
+                          </p>
+                          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                            You can view received purchase requests in your profile sales dashboard.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    const now = new Date();
+                    const isReserved = selectedProduct.status === "Reserved";
+                    const isReservedByMe = isReserved && selectedProduct.reservedBy === currentUser.id;
+                    const isReservedByOthers = isReserved && selectedProduct.reservedBy !== currentUser.id && selectedProduct.reservedUntil && new Date(selectedProduct.reservedUntil) > now;
+                    const isSold = selectedProduct.status === "Sold";
+
+                    if (isSold) {
+                      return (
+                        <div className="glass-panel" style={{ padding: "16px", background: "rgba(239, 68, 68, 0.05)", textAlign: "center", border: "1px solid rgba(239, 68, 68, 0.1)" }}>
+                          <p style={{ fontSize: "0.9rem", fontWeight: "600", color: "#ef4444" }}>
+                            This product has already been sold.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    if (isReservedByOthers) {
+                      return (
+                        <div className="glass-panel" style={{ padding: "16px", background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.1)" }}>
+                          <p style={{ fontSize: "0.9rem", fontWeight: "600", color: "#f59e0b" }}>
+                            Item currently reserved by another buyer.
+                          </p>
+                          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                            Someone is completing their checkout. If they do not pay within 15 minutes, the listing will be released.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    if (isReservedByMe) {
+                      return (
+                        <div className="glass-panel" style={{ padding: "20px", background: "var(--glass-bg)", border: "2px solid var(--accent)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.9rem", fontWeight: "700", color: "var(--accent)", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span className="pulse-indicator" style={{ width: "8px", height: "8px", background: "var(--accent)", borderRadius: "50%" }}></span>
+                              <span>Product Reserved For You</span>
+                            </span>
+                            <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                              Time Left: <ReservationTimer reservedUntil={selectedProduct.reservedUntil} onExpire={() => {
+                                alert("Reservation expired!");
+                                closeDetail();
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", borderBottom: "1px solid var(--border-color)", paddingBottom: "12px" }}>
+                            <strong>P2P Direct Payment:</strong> Please transfer the exact amount directly to the seller via UPI. The website only manages orders and verification.
+                          </div>
+
+                          {/* Payment details */}
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "600" }}>Seller Name</div>
+                              <div style={{ fontSize: "0.9rem", fontWeight: "700" }}>{selectedProduct.sellerName}</div>
+
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "600", marginTop: "12px" }}>Amount to Pay</div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "var(--accent)" }}>₹{selectedProduct.price}</div>
+
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "600", marginTop: "12px" }}>UPI ID</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                                <span style={{ fontSize: "0.85rem", fontFamily: "monospace", padding: "4px 8px", background: "var(--border-color)", borderRadius: "6px", color: "var(--text-primary)" }}>
+                                  {selectedProduct.upiId}
+                                </span>
+                                <button
+                                  onClick={() => handleCopyUpi(selectedProduct.upiId)}
+                                  className="btn btn-ghost"
+                                  style={{ padding: "4px 8px", fontSize: "0.7rem", border: "1px solid var(--border-color)" }}
+                                >
+                                  {copiedUpi ? "Copied ✓" : "Copy UPI ID"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {selectedProduct.qrCode ? (
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: "600", marginBottom: "4px" }}>Seller UPI QR Code</span>
+                                <img
+                                  src={selectedProduct.qrCode}
+                                  alt="UPI QR Code"
+                                  style={{ width: "120px", height: "120px", objectFit: "contain", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "4px", background: "#ffffff" }}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border-color)", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                            <p style={{ fontWeight: "600", marginBottom: "4px" }}>Important Instructions:</p>
+                            <ul style={{ paddingLeft: "16px", listStyleType: "disc" }}>
+                              <li>Pay exactly the displayed amount.</li>
+                              <li>Use any UPI application.</li>
+                              <li>After payment submit the Transaction ID.</li>
+                            </ul>
+                          </div>
+
+                          {/* Submit Payment Form */}
+                          <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            setCheckoutError("");
+                            if (!txId.trim()) {
+                              setCheckoutError("Transaction ID is required");
+                              return;
+                            }
+                            const txRegex = /^[a-zA-Z0-9]{9,18}$/;
+                            if (!txRegex.test(txId.trim())) {
+                              setCheckoutError("Invalid Transaction ID. It should be 9 to 18 alphanumeric characters.");
+                              return;
+                            }
+
+                            setIsSubmittingPayment(true);
+                            const res = await submitOrderPayment({
+                              productId: selectedProduct.id || selectedProduct._id,
+                              transactionId: txId.trim(),
+                              screenshot
+                            });
+                            setIsSubmittingPayment(false);
+                            if (res.success) {
+                              alert("Payment verification request submitted successfully! Order status: Pending Payment Verification.");
+                              closeDetail();
+                            } else {
+                              setCheckoutError(res.error || "Failed to submit payment details");
+                            }
+                          }} style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid var(--border-color)", paddingTop: "14px" }}>
+                            {checkoutError && (
+                              <div style={{ fontSize: "0.8rem", color: "#ef4444", background: "rgba(239, 68, 68, 0.05)", padding: "8px", borderRadius: "6px" }}>
+                                {checkoutError}
+                              </div>
+                            )}
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                                  UPI Transaction ID *
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Ref / Txn ID"
+                                  className="form-input"
+                                  value={txId}
+                                  onChange={(e) => setTxId(e.target.value)}
+                                  style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                                />
+                              </div>
+
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                                  Upload Payment Screenshot
+                                </label>
+                                <label style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  padding: "6px 10px",
+                                  borderRadius: "8px",
+                                  border: "1px dashed var(--border-color)",
+                                  cursor: "pointer",
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-secondary)",
+                                  textAlign: "center"
+                                }} className="glass-panel-hover">
+                                  {isScreenshotUploading ? "Reading..." : screenshot ? "Attached ✓" : "Upload File"}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleScreenshotUpload}
+                                    style={{ display: "none" }}
+                                    disabled={isScreenshotUploading}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+
+                            {screenshot && (
+                              <div style={{ width: "60px", height: "60px", borderRadius: "6px", overflow: "hidden", border: "1px solid var(--border-color)" }}>
+                                <img src={screenshot} alt="Screenshot preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              </div>
+                            )}
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
+                              <button
+                                type="submit"
+                                className="btn btn-primary"
+                                style={{ fontSize: "0.85rem", padding: "8px 16px" }}
+                                disabled={isSubmittingPayment}
+                              >
+                                {isSubmittingPayment ? "Submitting..." : "I Have Paid"}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      );
+                    }
+
+                    // Available for Reservation
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center", width: "100%" }}>
+                        {showConfirmReserve ? (
+                          <div className="glass-panel" style={{ padding: "16px", background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.2)", width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <p style={{ fontSize: "0.85rem", fontWeight: "700", color: "#f59e0b" }}>
+                              Confirm Reservation
+                            </p>
+                            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                              This locks the product for you for 15 minutes, allowing you to pay the seller directly via UPI. Please proceed only if you intend to make direct transfer.
+                            </p>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
+                              <button
+                                type="button"
+                                onClick={() => setShowConfirmReserve(false)}
+                                className="btn btn-ghost"
+                                style={{ fontSize: "0.75rem", padding: "6px 12px" }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setIsReserving(true);
+                                  const res = await reserveProduct(selectedProduct.id || selectedProduct._id);
+                                  setIsReserving(false);
+                                  setShowConfirmReserve(false);
+                                  if (res.success) {
+                                    setSelectedProduct(res.listing);
+                                  } else {
+                                    alert(res.error || "Reservation failed.");
+                                  }
+                                }}
+                                className="btn btn-primary"
+                                style={{ fontSize: "0.75rem", padding: "6px 12px", background: "#f59e0b", borderColor: "#f59e0b" }}
+                                disabled={isReserving}
+                              >
+                                {isReserving ? "Reserving..." : "Confirm & Reserve"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmReserve(true)}
+                            className="btn btn-primary"
+                            style={{ width: "100%", padding: "12px", fontSize: "0.95rem", fontWeight: "700", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                          >
+                            <span>Buy Now</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Actions Footer */}

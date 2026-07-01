@@ -61,6 +61,7 @@ export const AppProvider = ({ children }) => {
   const [notifications, setNotifications] = useState(() => readStorage("vitconnect_notifications", []));
   const [savedItems, setSavedItems] = useState(() => readStorage("vitconnect_saved", { listings: [], requests: [] }));
   const [users, setUsers] = useState(() => readStorage("vitconnect_users_list", []));
+  const [orders, setOrders] = useState(() => readStorage("vitconnect_orders", []));
 
   // Global Modal & Verification states
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -206,6 +207,43 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const fetchOrders = async () => {
+    const token = localStorage.getItem("vitconnect_token");
+    if (!token) return;
+    if (isDemoToken(token)) {
+      setOrders(readStorage("vitconnect_orders", []));
+      return;
+    }
+    try {
+      let mergedOrders = [];
+      if (currentUser?.isAdmin) {
+        const res = await fetch(`${API_URL}/api/orders/admin`, { headers: getAuthHeaders() });
+        if (res.ok) {
+          mergedOrders = await res.json();
+        }
+      } else {
+        const [buyerRes, sellerRes] = await Promise.all([
+          fetch(`${API_URL}/api/orders/buyer`, { headers: getAuthHeaders() }),
+          fetch(`${API_URL}/api/orders/seller`, { headers: getAuthHeaders() })
+        ]);
+        let buyerOrders = [];
+        let sellerOrders = [];
+        if (buyerRes.ok) buyerOrders = await buyerRes.json();
+        if (sellerRes.ok) sellerOrders = await sellerRes.json();
+        const orderMap = new Map();
+        buyerOrders.forEach(o => orderMap.set(o.id || o._id, o));
+        sellerOrders.forEach(o => orderMap.set(o.id || o._id, o));
+        mergedOrders = Array.from(orderMap.values());
+      }
+      mergedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setOrders(mergedOrders);
+      writeStorage("vitconnect_orders", mergedOrders);
+    } catch (e) {
+      console.error("Failed to fetch orders, loading cache:", e);
+      setOrders(readStorage("vitconnect_orders", []));
+    }
+  };
+
   // Load everything on mount
   useEffect(() => {
     fetchProfile();
@@ -213,6 +251,7 @@ export const AppProvider = ({ children }) => {
     fetchRequests();
     fetchLostFound();
     fetchUsersList();
+    fetchOrders();
 
     setSavedItems(readStorage("vitconnect_saved", { listings: [], requests: [] }));
     setNotifications(readStorage("vitconnect_notifications", []));
@@ -223,9 +262,11 @@ export const AppProvider = ({ children }) => {
     if (currentUser) {
       writeStorage("vitconnect_user", currentUser);
       fetchChats();
+      fetchOrders();
     } else {
       localStorage.removeItem("vitconnect_user");
       setConversations([]);
+      setOrders([]);
     }
   }, [currentUser]);
 
@@ -234,6 +275,8 @@ export const AppProvider = ({ children }) => {
     if (!currentUser) return;
     const interval = setInterval(() => {
       fetchChats();
+      fetchOrders();
+      fetchListings();
     }, 3000);
     return () => clearInterval(interval);
   }, [currentUser]);
@@ -365,6 +408,342 @@ export const AppProvider = ({ children }) => {
     setCurrentUser(null);
     if (window.google?.accounts?.id) {
       window.google.accounts.id.disableAutoSelect();
+    }
+  };
+
+  // Orders CRUD
+  const reserveProduct = async (productId) => {
+    const reserveLocal = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      let matchedListing = null;
+      setListings(prev => {
+        const updated = prev.map(item => {
+          if (item.id === productId || item._id === productId) {
+            if (item.sellerId === currentUser.id) return item;
+            const updatedItem = {
+              ...item,
+              status: "Reserved",
+              reservedBy: currentUser.id,
+              reservedUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+            };
+            matchedListing = updatedItem;
+            return updatedItem;
+          }
+          return item;
+        });
+        writeStorage("vitconnect_listings", updated);
+        return updated;
+      });
+      if (matchedListing) {
+        addNotification({
+          type: "system",
+          text: `You have successfully reserved "${matchedListing.name}" for 15 minutes. Submit payment to confirm.`
+        });
+        return { success: true, listing: matchedListing };
+      }
+      return { success: false, error: "Listing not found or you are the seller." };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return reserveLocal();
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/reserve/${productId}`, {
+        method: "POST",
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const updatedListing = await res.json();
+        fetchListings();
+        return { success: true, listing: updatedListing };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || "Failed to reserve product." };
+      }
+    } catch (e) {
+      console.error("Failed to reserve product:", e);
+      return reserveLocal();
+    }
+  };
+
+  const submitOrderPayment = async (orderData) => {
+    const submitLocal = () => {
+      if (!currentUser) return { success: false, error: "Please sign in first." };
+      const listing = listings.find(item => item.id === orderData.productId || item._id === orderData.productId);
+      if (!listing) return { success: false, error: "Listing not found." };
+
+      const duplicate = orders.find(o => (o.productId === orderData.productId) && o.buyerId === currentUser.id && o.status === "Pending Payment Verification");
+      if (duplicate) return { success: false, error: "You have already submitted a payment for this listing." };
+
+      const newOrder = {
+        id: `order-${Date.now()}`,
+        _id: `order-${Date.now()}`,
+        buyerId: currentUser.id,
+        buyerName: currentUser.name,
+        sellerId: listing.sellerId,
+        sellerName: listing.sellerName,
+        productId: listing.id || listing._id,
+        productName: listing.name,
+        amount: listing.price,
+        transactionId: orderData.transactionId,
+        screenshot: orderData.screenshot || "",
+        status: "Pending Payment Verification",
+        createdAt: new Date().toISOString()
+      };
+
+      setOrders(prev => {
+        const updated = [newOrder, ...prev];
+        writeStorage("vitconnect_orders", updated);
+        return updated;
+      });
+
+      setListings(prev => {
+        const updated = prev.map(item => {
+          if (item.id === orderData.productId || item._id === orderData.productId) {
+            return {
+              ...item,
+              status: "Reserved",
+              reservedBy: currentUser.id,
+              reservedUntil: null
+            };
+          }
+          return item;
+        });
+        writeStorage("vitconnect_listings", updated);
+        return updated;
+      });
+
+      addNotification({
+        type: "system",
+        text: `Payment submitted for "${listing.name}". Waiting for seller verification.`
+      });
+
+      return { success: true, order: newOrder };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return submitLocal();
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/submit`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(orderData)
+      });
+      if (res.ok) {
+        const order = await res.json();
+        fetchOrders();
+        fetchListings();
+        return { success: true, order };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || "Failed to submit payment." };
+      }
+    } catch (e) {
+      console.error("Failed to submit order payment:", e);
+      return submitLocal();
+    }
+  };
+
+  const approveOrderPayment = async (orderId) => {
+    const approveLocal = () => {
+      let matchedOrder = null;
+      setOrders(prev => {
+        const updated = prev.map(o => {
+          if (o.id === orderId || o._id === orderId) {
+            matchedOrder = { ...o, status: "Completed" };
+            return matchedOrder;
+          }
+          return o;
+        });
+        writeStorage("vitconnect_orders", updated);
+        return updated;
+      });
+
+      if (matchedOrder) {
+        setListings(prev => {
+          const updated = prev.map(item => {
+            if (item.id === matchedOrder.productId || item._id === matchedOrder.productId) {
+              return { ...item, status: "Sold" };
+            }
+            return item;
+          });
+          writeStorage("vitconnect_listings", updated);
+          return updated;
+        });
+
+        // Cancel other pending orders for this product
+        setOrders(prev => {
+          const updated = prev.map(o => {
+            if (o.productId === matchedOrder.productId && o.id !== orderId && o._id !== orderId && o.status === "Pending Payment Verification") {
+              return { ...o, status: "Rejected" };
+            }
+            return o;
+          });
+          writeStorage("vitconnect_orders", updated);
+          return updated;
+        });
+
+        // Increment itemsSold locally if seller is current user
+        if (currentUser && matchedOrder.sellerId === currentUser.id) {
+          const updatedUser = { ...currentUser, itemsSold: (currentUser.itemsSold || 0) + 1 };
+          setCurrentUser(updatedUser);
+          writeStorage("vitconnect_user", updatedUser);
+        }
+
+        // Local Notifications
+        addNotification({
+          type: "system",
+          text: `Payment Approved! You sold "${matchedOrder.productName}" successfully.`,
+          link: "#profile"
+        });
+
+        return { success: true };
+      }
+      return { success: false, error: "Order not found." };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return approveLocal();
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/approve`, {
+        method: "PATCH",
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        fetchOrders();
+        fetchListings();
+        fetchProfile();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || "Failed to approve payment." };
+      }
+    } catch (e) {
+      console.error("Failed to approve payment:", e);
+      return approveLocal();
+    }
+  };
+
+  const rejectOrderPayment = async (orderId) => {
+    const rejectLocal = () => {
+      let matchedOrder = null;
+      setOrders(prev => {
+        const updated = prev.map(o => {
+          if (o.id === orderId || o._id === orderId) {
+            matchedOrder = { ...o, status: "Rejected" };
+            return matchedOrder;
+          }
+          return o;
+        });
+        writeStorage("vitconnect_orders", updated);
+        return updated;
+      });
+
+      if (matchedOrder) {
+        setListings(prev => {
+          const updated = prev.map(item => {
+            if (item.id === matchedOrder.productId || item._id === matchedOrder.productId) {
+              return {
+                ...item,
+                status: "Available",
+                reservedBy: null,
+                reservedUntil: null
+              };
+            }
+            return item;
+          });
+          writeStorage("vitconnect_listings", updated);
+          return updated;
+        });
+
+        addNotification({
+          type: "system",
+          text: `Payment Rejected for "${matchedOrder.productName}". Product is available again.`,
+          link: "#profile"
+        });
+
+        return { success: true };
+      }
+      return { success: false, error: "Order not found." };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return rejectLocal();
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/reject`, {
+        method: "PATCH",
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        fetchOrders();
+        fetchListings();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || "Failed to reject payment." };
+      }
+    } catch (e) {
+      console.error("Failed to reject payment:", e);
+      return rejectLocal();
+    }
+  };
+
+  const deleteOrder = async (orderId) => {
+    const deleteLocal = () => {
+      const order = orders.find(o => o.id === orderId || o._id === orderId);
+      if (order && order.status === "Pending Payment Verification") {
+        setListings(prev => {
+          const updated = prev.map(item => {
+            if (item.id === order.productId || item._id === order.productId) {
+              return {
+                ...item,
+                status: "Available",
+                reservedBy: null,
+                reservedUntil: null
+              };
+            }
+            return item;
+          });
+          writeStorage("vitconnect_listings", updated);
+          return updated;
+        });
+      }
+
+      setOrders(prev => {
+        const updated = prev.filter(o => o.id !== orderId && o._id !== orderId);
+        writeStorage("vitconnect_orders", updated);
+        return updated;
+      });
+      return { success: true };
+    };
+
+    if (isDemoToken(localStorage.getItem("vitconnect_token"))) {
+      return deleteLocal();
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/admin/${orderId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        fetchOrders();
+        fetchListings();
+        return { success: true };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.msg || "Failed to delete order." };
+      }
+    } catch (e) {
+      console.error("Failed to delete order:", e);
+      return deleteLocal();
     }
   };
 
@@ -845,6 +1224,7 @@ export const AppProvider = ({ children }) => {
         notifications,
         savedItems,
         users,
+        orders,
         login,
         loginWithGoogle,
         loginWithGoogleOauth,
@@ -865,6 +1245,12 @@ export const AppProvider = ({ children }) => {
         banUser,
         assignUserBadge,
         reportItem,
+        fetchOrders,
+        reserveProduct,
+        submitOrderPayment,
+        approveOrderPayment,
+        rejectOrderPayment,
+        deleteOrder,
         isAuthModalOpen,
         authModalMessage,
         isProfilePromptOpen,
