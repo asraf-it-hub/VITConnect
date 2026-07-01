@@ -479,6 +479,49 @@ export default function ProfileTab({ setActiveTab, setMarketplaceFilters }) {
         )}
       </AnimatePresence>
 
+      {/* Sales Action Alert Banner */}
+      {(() => {
+        const pendingSales = orders ? orders.filter(o => o.sellerId === currentUser?.id && o.status === "Pending Payment Verification") : [];
+        if (pendingSales.length === 0 || activeSubTab === "sales") return null;
+        return (
+          <div className="glass-panel" style={{
+            background: "rgba(245, 158, 11, 0.08)",
+            border: "1px solid rgba(245, 158, 11, 0.25)",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "20px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="pulse-indicator" style={{ display: "inline-block", width: "8px", height: "8px", background: "#f59e0b", borderRadius: "50%" }} />
+              <p style={{ fontSize: "0.95rem", fontWeight: "600", color: "var(--text-primary)" }}>
+                Action Required: You have {pendingSales.length} pending payment verification request{pendingSales.length > 1 ? 's' : ''} awaiting review.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveSubTab("sales")}
+              className="btn"
+              style={{
+                background: "#f59e0b",
+                color: "#ffffff",
+                border: "none",
+                padding: "6px 12px",
+                fontSize: "0.8rem",
+                borderRadius: "8px",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Go to Sales Panel
+            </button>
+          </div>
+        );
+      })()}
+
       {/* 2. Subsection Switcher Tabs */}
       <div style={{
         display: "flex",

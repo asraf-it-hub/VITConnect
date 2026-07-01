@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardHome({ setActiveTab, onActionClick, setMarketplaceFilters }) {
-  const { currentUser, listings, requests, lostFound, toggleSaveItem, savedItems } = useContext(AppContext);
+  const { currentUser, listings, requests, lostFound, toggleSaveItem, savedItems, orders } = useContext(AppContext);
   const [greeting, setGreeting] = useState("Hello");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,6 +71,51 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
       transition={{ duration: 0.3 }}
       style={{ display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "40px" }}
     >
+      {/* Pending sales alert reminder banner */}
+      {(() => {
+        const pendingSales = orders ? orders.filter(o => o.sellerId === currentUser?.id && o.status === "Pending Payment Verification") : [];
+        if (pendingSales.length === 0) return null;
+        return (
+          <div className="glass-panel" style={{
+            background: "rgba(245, 158, 11, 0.08)",
+            border: "1px solid rgba(245, 158, 11, 0.25)",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="pulse-indicator" style={{ display: "inline-block", width: "8px", height: "8px", background: "#f59e0b", borderRadius: "50%" }} />
+              <p style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--text-primary)" }}>
+                Action Required: You have {pendingSales.length} pending payment verification request{pendingSales.length > 1 ? 's' : ''} from buyers.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab("profile");
+                window.location.hash = "profile";
+              }}
+              className="btn btn-ghost"
+              style={{
+                borderColor: "#f59e0b",
+                color: "#f59e0b",
+                padding: "6px 12px",
+                fontSize: "0.8rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px"
+              }}
+            >
+              <span>Verify in Sales Panel</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        );
+      })()}
+
       {/* 1. Welcome Header */}
       <div style={{
         display: "flex",

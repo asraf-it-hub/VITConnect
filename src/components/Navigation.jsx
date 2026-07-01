@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function Navigation({ activeTab, setActiveTab }) {
-  const { currentUser, conversations, notifications, logout } = useContext(AppContext);
+  const { currentUser, conversations, notifications, logout, orders } = useContext(AppContext);
   const [isDark, setIsDark] = useState(() => document.body.classList.contains("dark"));
 
   // Toggle Theme
@@ -48,6 +48,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
   // Calculate unread counts
   const unreadMessagesCount = conversations.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
   const unreadNotifCount = notifications.filter(n => !n.read).length;
+  const pendingSalesCount = orders ? orders.filter(o => o.sellerId === currentUser?.id && o.status === "Pending Payment Verification").length : 0;
 
   const navItems = [
     { id: "home", label: "Home", icon: Home },
@@ -56,7 +57,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
     { id: "lostfound", label: "Lost & Found", icon: Compass },
     { id: "messages", label: "Messages", icon: MessageSquare, badge: unreadMessagesCount },
     { id: "notifications", label: "Notifications", icon: Bell, badge: unreadNotifCount },
-    { id: "profile", label: "Profile", icon: User }
+    { id: "profile", label: "Profile", icon: User, badge: pendingSalesCount }
   ];
 
   // If user is Admin, add Admin dashboard option
@@ -167,7 +168,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
                     right: "12px",
                     top: "50%",
                     transform: "translateY(-50%)",
-                    background: item.id === "messages" ? "var(--accent)" : "#ef4444",
+                    background: item.id === "messages" ? "var(--accent)" :
+                                item.id === "profile" ? "#f59e0b" : "#ef4444",
                     color: "#ffffff",
                     fontSize: "0.75rem",
                     fontWeight: "600",
@@ -317,17 +319,30 @@ export default function Navigation({ activeTab, setActiveTab }) {
           }}
         >
           {currentUser ? (
-            <img
-              src={currentUser.photo}
-              alt="Profile"
-              style={{
-                width: "20px",
-                height: "20px",
-                borderRadius: "50%",
-                border: activeTab === "profile" ? "1.5px solid var(--accent)" : "1.5px solid transparent",
-                objectFit: "cover"
-              }}
-            />
+            <div style={{ position: "relative" }}>
+              <img
+                src={currentUser.photo}
+                alt="Profile"
+                style={{
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  border: activeTab === "profile" ? "1.5px solid var(--accent)" : "1.5px solid transparent",
+                  objectFit: "cover"
+                }}
+              />
+              {pendingSalesCount > 0 && (
+                <span style={{
+                  position: "absolute",
+                  top: "-4px",
+                  right: "-4px",
+                  background: "#f59e0b",
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%"
+                }} />
+              )}
+            </div>
           ) : (
             <User size={20} />
           )}
