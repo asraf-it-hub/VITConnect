@@ -290,6 +290,80 @@ export const AppProvider = ({ children }) => {
     writeStorage("vitconnect_saved", savedItems);
   }, [savedItems]);
 
+  // Dynamically generate in-app notifications based on orders status
+  useEffect(() => {
+    if (!currentUser || orders.length === 0) return;
+
+    let updated = false;
+    const newNotifications = [...notifications];
+
+    orders.forEach(order => {
+      const orderId = order.id || order._id;
+      
+      // 1. Seller: pending payment verification request
+      if (order.sellerId === currentUser.id && order.status === "Pending Payment Verification") {
+        const notifId = `notif-order-${orderId}-pending`;
+        const exists = newNotifications.some(n => n.id === notifId);
+        if (!exists) {
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          newNotifications.unshift({
+            id: notifId,
+            type: "system",
+            text: `New payment verification request received for your listing "${order.productName}" from ${order.buyerName}.`,
+            time: `Today, ${timestamp}`,
+            createdAt: Date.now(),
+            read: false,
+            link: "#profile"
+          });
+          updated = true;
+        }
+      }
+
+      // 2. Buyer: completed payment notification
+      if (order.buyerId === currentUser.id && order.status === "Completed") {
+        const notifId = `notif-order-${orderId}-completed`;
+        const exists = newNotifications.some(n => n.id === notifId);
+        if (!exists) {
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          newNotifications.unshift({
+            id: notifId,
+            type: "system",
+            text: `Payment Approved! You purchased "${order.productName}" successfully.`,
+            time: `Today, ${timestamp}`,
+            createdAt: Date.now(),
+            read: false,
+            link: "#profile"
+          });
+          updated = true;
+        }
+      }
+
+      // 3. Buyer: rejected payment notification
+      if (order.buyerId === currentUser.id && order.status === "Rejected") {
+        const notifId = `notif-order-${orderId}-rejected`;
+        const exists = newNotifications.some(n => n.id === notifId);
+        if (!exists) {
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          newNotifications.unshift({
+            id: notifId,
+            type: "system",
+            text: `Payment Rejected for "${order.productName}". Product is available again.`,
+            time: `Today, ${timestamp}`,
+            createdAt: Date.now(),
+            read: false,
+            link: "#profile"
+          });
+          updated = true;
+        }
+      }
+    });
+
+    if (updated) {
+      setNotifications(newNotifications);
+      writeStorage("vitconnect_notifications", newNotifications);
+    }
+  }, [orders, currentUser, notifications]);
+
   // Authentication Actions
   const login = async (email, password, method) => {
     const completeDemoLogin = () => {

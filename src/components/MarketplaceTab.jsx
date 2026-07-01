@@ -25,6 +25,7 @@ function ReservationTimer({ reservedUntil, onExpire }) {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
+    if (!reservedUntil) return;
     const calculateTimeLeft = () => {
       const diff = new Date(reservedUntil) - new Date();
       return diff > 0 ? Math.floor(diff / 1000) : 0;
@@ -44,6 +45,10 @@ function ReservationTimer({ reservedUntil, onExpire }) {
     return () => clearInterval(interval);
   }, [reservedUntil, onExpire]);
 
+  if (!reservedUntil) {
+    return <span style={{ color: "#10b981", fontWeight: "700" }}>Locked for Verification</span>;
+  }
+
   if (timeLeft <= 0) {
     return <span style={{ color: "#ef4444", fontWeight: "700" }}>Expired</span>;
   }
@@ -58,7 +63,7 @@ function ReservationTimer({ reservedUntil, onExpire }) {
 }
 
 export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpenReport }) {
-  const { listings, savedItems, toggleSaveItem, currentUser, reportItem, users, reserveProduct, submitOrderPayment, openAuthModal } = useContext(AppContext);
+  const { listings, savedItems, toggleSaveItem, currentUser, reportItem, users, reserveProduct, submitOrderPayment, openAuthModal, orders } = useContext(AppContext);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [sortBy, setSortBy] = useState("newest"); // price-asc, price-desc, newest, popular
   const [showFilters, setShowFilters] = useState(false);
@@ -124,6 +129,9 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
 
   // Filter listings
   const filteredListings = listings.filter(item => {
+    // Exclude Sold listings from active marketplace view
+    if (item.status === "Sold") return false;
+
     // 1. Search Query
     if (filters.search) {
       const term = filters.search.toLowerCase();
@@ -827,6 +835,23 @@ export default function MarketplaceTab({ filters, setFilters, onOpenChat, onOpen
                     }
 
                     if (isReservedByMe) {
+                      const pendingOrder = orders.find(o => (o.productId === selectedProduct.id || o.productId === selectedProduct._id) && (o.buyerId === currentUser.id || o.buyerId === currentUser._id) && o.status === "Pending Payment Verification");
+                      if (pendingOrder) {
+                        return (
+                          <div className="glass-panel" style={{ padding: "20px", background: "var(--glass-bg)", border: "2px solid #f59e0b", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "14px", textAlign: "center" }}>
+                            <h4 style={{ fontSize: "1.05rem", fontWeight: "700", color: "#f59e0b" }}>
+                              Payment Verification Pending
+                            </h4>
+                            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                              You have submitted payment details for this listing. Transaction ID: <strong style={{ fontFamily: "monospace" }}>{pendingOrder.transactionId}</strong>.
+                            </p>
+                            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                              The seller is reviewing your transaction. You will be notified once they verify the payment.
+                            </p>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div className="glass-panel" style={{ padding: "20px", background: "var(--glass-bg)", border: "2px solid var(--accent)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

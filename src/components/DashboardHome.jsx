@@ -18,7 +18,8 @@ import {
   ExternalLink,
   MessageSquare,
   Bookmark,
-  ClipboardList
+  ClipboardList,
+  CheckCircle
 } from "lucide-react";
 
 export default function DashboardHome({ setActiveTab, onActionClick, setMarketplaceFilters }) {
@@ -35,10 +36,12 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
   }, []);
 
   // Filter lists to show recent highlights
-  const recentListings = listings.slice(0, 4);
+  const activeListings = listings.filter(item => !item.status || item.status === "Available" || (item.status === "Reserved" && item.reservedUntil && new Date(item.reservedUntil) > new Date()));
+  const recentListings = activeListings.slice(0, 4);
   const recentRequests = requests.slice(0, 3);
   const recentLostFound = lostFound.filter(item => !item.resolved).slice(0, 3);
-  const recommendedItems = listings.slice().reverse().slice(0, 4);
+  const recommendedItems = activeListings.slice().reverse().slice(0, 4);
+  const soldListings = listings.filter(item => item.status === "Sold");
 
   const categories = [
     { name: "Books", icon: Book, color: "#3b82f6" },
@@ -529,6 +532,71 @@ export default function DashboardHome({ setActiveTab, onActionClick, setMarketpl
           ))}
         </div>
       </div>
+
+      {/* Showcase of items sold through VITConnect */}
+      {soldListings.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+            <span style={{ display: "inline-flex", background: "rgba(16, 185, 129, 0.12)", color: "#10b981", padding: "6px", borderRadius: "8px" }}>
+              <CheckCircle size={16} />
+            </span>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "700" }}>Sold via VITConnect</h3>
+          </div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: "20px"
+          }}>
+            {soldListings.slice(0, 4).map((item) => (
+              <div
+                key={item.id}
+                className="glass-panel"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  opacity: 0.85
+                }}
+              >
+                <div className="image-container" style={{ filter: "grayscale(30%)" }}>
+                  <img src={item.images[0]} alt={item.name} />
+                  <span style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    background: "rgba(239, 68, 68, 0.85)",
+                    backdropFilter: "blur(4px)",
+                    color: "#ffffff",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: "700"
+                  }}>
+                    Sold (₹{item.price})
+                  </span>
+                </div>
+                <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "8px", flexGrow: 1 }}>
+                  <h4 style={{
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    textDecoration: "line-through",
+                    color: "var(--text-secondary)"
+                  }}>
+                    {item.name}
+                  </h4>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                    <span>Seller: {item.sellerName}</span>
+                    <span style={{ color: "#10b981", fontWeight: "600" }}>Verified Purchase ✓</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
