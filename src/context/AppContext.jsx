@@ -365,44 +365,109 @@ export const AppProvider = ({ children }) => {
   }, [orders, currentUser, notifications]);
 
   // Authentication Actions
-  const login = async (email, password, method) => {
+  const sendOtp = async (email) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.msg || "Failed to send OTP" };
+      }
+      return { success: true, message: data.msg };
+    } catch (e) {
+      console.warn("Auth server offline, simulating OTP send (development):", e);
+      // Simulate sending OTP in dev/offline mode
+      console.log(`\n========================================\n[OFFLINE DEMO OTP] Send OTP to: ${email}\nCode: 123456\n========================================\n`);
+      return { success: true, message: "OTP generated successfully (logged to server console in dev fallback)." };
+    }
+  };
+
+  const login = async (email, otpOrPassword, nameOrMethod, department, year, bio, mobile, photo) => {
     const completeDemoLogin = () => {
       const offlineUser = {
         ...MOCK_USERS[0],
-        id: readStorage("vitconnect_user", null)?.id || MOCK_USERS[0].id,
+        id: readStorage("vitconnect_user", null)?.id || `demo-user-${Date.now()}`,
         email,
-        name: email.split("@")[0].split(".").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")
+        name: nameOrMethod && nameOrMethod !== "google" && nameOrMethod !== "otp" && nameOrMethod !== "email"
+          ? nameOrMethod
+          : email.split("@")[0].split(".").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
+        department: department || "",
+        year: year || "",
+        bio: bio || "VIT-AP Student. Connect to buy or sell items.",
+        mobile: mobile || "",
+        photo: photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
       };
       localStorage.setItem("vitconnect_token", `${DEMO_TOKEN_PREFIX}:${Date.now()}`);
       writeStorage("vitconnect_user", offlineUser);
       setCurrentUser(offlineUser);
       addNotification({
         type: "system",
-        text: `Welcome back, ${offlineUser.name}! Your session will stay signed in on this browser.`
+        text: `Welcome back, ${offlineUser.name}! Your offline session is active.`
       });
       return offlineUser;
     };
 
+    // If it's a social/demo login trigger, bypass OTP verification and call the old login endpoint
+    if (otpOrPassword === "dummy-google" || nameOrMethod === "google" || nameOrMethod === "otp") {
+      try {
+        const res = await fetch(`${API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem("vitconnect_token", data.token);
+          setCurrentUser(data.user);
+          addNotification({
+            type: "system",
+            text: `Welcome back, ${data.user.name}! Login verified via demo/social.`
+          });
+          return data.user;
+        }
+        return completeDemoLogin();
+      } catch (e) {
+        console.error("Auth server error:", e);
+        return completeDemoLogin();
+      }
+    }
+
+    // Otherwise, perform regular OTP verification
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`${API_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({
+          email,
+          otp: otpOrPassword,
+          name: nameOrMethod,
+          department,
+          year,
+          bio,
+          mobile,
+          photo
+        })
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         localStorage.setItem("vitconnect_token", data.token);
         setCurrentUser(data.user);
         addNotification({
           type: "system",
-          text: `Welcome back, ${data.user.name}! Login verified via ${method.toUpperCase()}.`
+          text: `Welcome back, ${data.user.name}! Login verified via OTP.`
         });
-        return data.user;
+        return { success: true, user: data.user };
+      } else {
+        return { success: false, error: data.msg || "Invalid OTP code." };
       }
-      return completeDemoLogin();
     } catch (e) {
-      console.error("Auth server error:", e);
-      return completeDemoLogin();
+      console.warn("Auth server offline, completing fallback demo login:", e);
+      const user = completeDemoLogin();
+      return { success: true, user };
     }
   };
 
@@ -1300,6 +1365,7 @@ export const AppProvider = ({ children }) => {
         users,
         orders,
         login,
+        sendOtp,
         loginWithGoogle,
         loginWithGoogleOauth,
         loginWithGithubOauth,

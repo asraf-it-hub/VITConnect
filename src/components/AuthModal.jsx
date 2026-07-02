@@ -1,17 +1,23 @@
 import React, { useState, useContext, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Phone, ShieldCheck, X, RefreshCw } from "lucide-react";
+import { Mail, X, RefreshCw } from "lucide-react";
 
 export default function AuthModal({ isOpen, onClose, message }) {
-  const { login, loginWithGoogle, loginWithGoogleOauth, loginWithGithubOauth } = useContext(AppContext);
-  const [activeTab, setActiveTab] = useState("google"); // google, email, otp
+  const { login, sendOtp, loginWithGoogle, loginWithGoogleOauth, loginWithGithubOauth } = useContext(AppContext);
+  const [activeTab, setActiveTab] = useState("signin"); // signin, signup
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  
+  // Signup details fields
+  const [name, setName] = useState("");
+  const [department, setDepartment] = useState("");
+  const [year, setYear] = useState("");
+  const [bio, setBio] = useState("");
+  const [mobile, setMobile] = useState("");
+
   const [otpSent, setOtpSent] = useState(false);
-  const [otpValue, setOtpValue] = useState(["", "", "", ""]);
-  const [resendTimer, setResendTimer] = useState(30);
+  const [otpValue, setOtpValue] = useState(["", "", "", "", "", ""]);
+  const [resendTimer, setResendTimer] = useState(60);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [googleScriptLoaded, setGoogleScriptLoaded] = useState(false);
@@ -44,7 +50,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
 
   // Initialize and render GSI button
   useEffect(() => {
-    if (activeTab === "google" && googleScriptLoaded && isOpen) {
+    if (activeTab === "signin" && googleScriptLoaded && isOpen) {
       try {
         window.google.accounts.id.initialize({
           client_id: "775611308846-02o1afpdpqu8oulfdmrnitebqgq0lvri.apps.googleusercontent.com",
@@ -95,21 +101,25 @@ export default function AuthModal({ isOpen, onClose, message }) {
 
   const resetState = () => {
     setEmail("");
-    setPassword("");
-    setPhoneNumber("");
+    setName("");
+    setDepartment("");
+    setYear("");
+    setBio("");
+    setMobile("");
     setOtpSent(false);
-    setOtpValue(["", "", "", ""]);
-    setResendTimer(30);
+    setOtpValue(["", "", "", "", "", ""]);
+    setResendTimer(60);
     setError("");
     setIsLoading(false);
   };
 
   const validateEmail = (val) => {
-    return val.endsWith("@vitap.ac.in") || val.endsWith("@vitapstudent.ac.in");
+    const lower = val.toLowerCase();
+    return lower.endsWith("@vitap.ac.in") || lower.endsWith("@vitapstudent.ac.in") || lower.endsWith("@gmail.com");
   };
 
-  const handleEmailLogin = (e) => {
-    e.preventDefault();
+  const handleSendOtp = async (e) => {
+    if (e) e.preventDefault();
     setError("");
     
     if (!email) {
@@ -117,20 +127,43 @@ export default function AuthModal({ isOpen, onClose, message }) {
       return;
     }
     if (!validateEmail(email)) {
-      setError("Please use your official VIT-AP student email (@vitap.ac.in)");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError("Please use a valid student email (@vitap.ac.in) or Gmail (@gmail.com)");
       return;
     }
 
+    if (activeTab === "signup") {
+      if (!name.trim()) {
+        setError("Name is required");
+        return;
+      }
+      if (!department) {
+        setError("Department is required");
+        return;
+      }
+      if (!year) {
+        setError("Graduation year is required");
+        return;
+      }
+      if (mobile.length !== 10 || !/^\d+$/.test(mobile)) {
+        setError("Please enter a valid 10-digit mobile number");
+        return;
+      }
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      login(email, password, "email");
+    try {
+      const res = await sendOtp(email);
       setIsLoading(false);
-      handleClose();
-    }, 1200);
+      if (res.success) {
+        setOtpSent(true);
+        setResendTimer(60);
+      } else {
+        setError(res.error || "Failed to send OTP code.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Could not connect to authentication server.");
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -138,7 +171,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
     if (!emailInput) return; // User cancelled
     
     if (!validateEmail(emailInput)) {
-      setError("Please use a valid VIT-AP student email (@vitap.ac.in)");
+      setError("Please use a valid student email (@vitap.ac.in) or Gmail (@gmail.com)");
       return;
     }
 
@@ -156,22 +189,6 @@ export default function AuthModal({ isOpen, onClose, message }) {
     window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email`;
   };
 
-  const handleSendOtp = (e) => {
-    e.preventDefault();
-    setError("");
-    if (phoneNumber.length !== 10 || !/^\d+$/.test(phoneNumber)) {
-      setError("Enter a valid 10-digit mobile number");
-      return;
-    }
-
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setOtpSent(true);
-      setResendTimer(30);
-    }, 1000);
-  };
-
   const handleOtpInput = (index, value) => {
     if (value.length > 1) return; // Keep it single digit
     const newOtp = [...otpValue];
@@ -179,45 +196,54 @@ export default function AuthModal({ isOpen, onClose, message }) {
     setOtpValue(newOtp);
 
     // Focus next input
-    if (value !== "" && index < 3) {
-      document.getElementById(`otp-input-${index + 1}`).focus();
+    if (value !== "" && index < 5) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      if (nextInput) nextInput.focus();
     }
   };
 
   const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && otpValue[index] === "" && index > 0) {
-      document.getElementById(`otp-input-${index - 1}`).focus();
+      const prevInput = document.getElementById(`otp-input-${index - 1}`);
+      if (prevInput) prevInput.focus();
     }
   };
 
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    setError("");
     const code = otpValue.join("");
-    if (code.length < 4) {
-      setError("Please enter the complete 4-digit OTP");
+    if (code.length < 6) {
+      setError("Please enter the complete 6-digit OTP code");
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      // Simulate verification - log in a mock user linked to phone
-      login(`${phoneNumber}@vitap.ac.in`, "dummy-otp-pass", "otp");
+    try {
+      let res;
+      if (activeTab === "signup") {
+        res = await login(email, code, name, department, year, bio, mobile, "");
+      } else {
+        res = await login(email, code);
+      }
       setIsLoading(false);
-      handleClose();
-    }, 1200);
+      if (res && res.success) {
+        handleClose();
+      } else {
+        setError(res?.error || "Invalid or incorrect OTP code. Please try again.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Authentication failed. Please verify the code and try again.");
+    }
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    setOtpValue(["", "", "", ""]);
-    setResendTimer(30);
+    setOtpValue(["", "", "", "", "", ""]);
+    setResendTimer(60);
     setError("");
-    // Simulate resending
-    addNotificationToConsole();
-  };
-
-  const addNotificationToConsole = () => {
-    console.log("Mock OTP sent to: " + phoneNumber + " Code: 5123");
+    await handleSendOtp();
   };
 
   return (
@@ -305,28 +331,33 @@ export default function AuthModal({ isOpen, onClose, message }) {
           marginBottom: "24px",
           border: "1px solid var(--border-color)"
         }}>
-          {["google", "email", "otp"].map(tab => (
+          {[
+            { id: "signin", label: "SIGN IN" },
+            { id: "signup", label: "SIGN UP" }
+          ].map(tab => (
             <button
-              key={tab}
+              key={tab.id}
               onClick={() => {
-                setActiveTab(tab);
+                setActiveTab(tab.id);
                 setError("");
+                setOtpSent(false);
+                setOtpValue(["", "", "", "", "", ""]);
               }}
               style={{
                 flex: 1,
                 border: "none",
-                background: activeTab === tab ? "var(--bg-surface-solid)" : "transparent",
-                color: activeTab === tab ? "var(--accent)" : "var(--text-secondary)",
+                background: activeTab === tab.id ? "var(--bg-surface-solid)" : "transparent",
+                color: activeTab === tab.id ? "var(--accent)" : "var(--text-secondary)",
                 padding: "8px 0",
                 fontSize: "0.85rem",
-                fontWeight: activeTab === tab ? "600" : "500",
+                fontWeight: activeTab === tab.id ? "600" : "500",
                 borderRadius: "8px",
                 cursor: "pointer",
                 transition: "all var(--transition-fast)",
-                boxShadow: activeTab === tab ? "var(--shadow-sm)" : "none"
+                boxShadow: activeTab === tab.id ? "var(--shadow-sm)" : "none"
               }}
             >
-              {tab === "google" ? "SOCIAL" : tab.toUpperCase()}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -371,51 +402,84 @@ export default function AuthModal({ isOpen, onClose, message }) {
 
         {!isLoading && (
           <AnimatePresence mode="wait">
-            {/* Google & GitHub Social Auth View */}
-            {activeTab === "google" && (
+            {/* Sign In View */}
+            {activeTab === "signin" && (
               <motion.div
-                key="google"
+                key="signin"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "14px", width: "100%" }}
+                style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}
               >
-                <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "12px", lineHeight: "1.5" }}>
-                  Sign in with your official Google or GitHub student account to connect and exchange items.
-                </p>
-                
-                {/* Official GSI Button Container */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-                  <div id="google-signin-btn-container" style={{ width: "100%", display: "flex", justifyContent: "center", minHeight: "44px" }}></div>
+                {/* Social Login Section */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", textAlign: "center", margin: "0 0 4px 0" }}>
+                    Sign in via Official Student Accounts
+                  </p>
                   
-                  {/* Google Fallback Button */}
-                  {!googleScriptLoaded && (
-                    <button
-                      onClick={handleGoogleLogin}
-                      className="btn"
-                      style={{
-                        width: "100%",
-                        background: "var(--bg-surface-solid)",
-                        color: "var(--text-primary)",
-                        border: "1px solid var(--border-color)",
-                        padding: "12px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "12px",
-                        borderRadius: "12px",
-                        boxShadow: "var(--shadow-sm)"
-                      }}
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                      </svg>
-                      <span style={{ fontWeight: "600" }}>Continue with Google (Demo)</span>
-                    </button>
-                  )}
+                  {/* Official GSI Button Container */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+                    <div id="google-signin-btn-container" style={{ width: "100%", display: "flex", justifyContent: "center", minHeight: "44px" }}></div>
+                    
+                    {/* Google Fallback Button */}
+                    {!googleScriptLoaded && (
+                      <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        className="btn"
+                        style={{
+                          width: "100%",
+                          background: "var(--bg-surface-solid)",
+                          color: "var(--text-primary)",
+                          border: "1px solid var(--border-color)",
+                          padding: "12px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "12px",
+                          borderRadius: "12px",
+                          boxShadow: "var(--shadow-sm)"
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                        </svg>
+                        <span style={{ fontWeight: "600" }}>Continue with Google (Demo)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* GitHub Button */}
+                  <button
+                    type="button"
+                    onClick={handleGithubRedirect}
+                    className="btn"
+                    style={{
+                      width: "100%",
+                      background: "#24292e",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "12px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "12px",
+                      borderRadius: "12px",
+                      boxShadow: "var(--shadow-sm)",
+                      cursor: "pointer",
+                      transition: "all var(--transition-fast)"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#1b1f23"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "#24292e"}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                    <span style={{ fontWeight: "600" }}>Continue with GitHub</span>
+                  </button>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "4px 0", color: "var(--text-muted)", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -424,167 +488,43 @@ export default function AuthModal({ isOpen, onClose, message }) {
                   <span style={{ height: "1px", width: "40px", background: "var(--border-color)", marginLeft: "8px" }}></span>
                 </div>
 
-                {/* GitHub Button */}
-                <button
-                  onClick={handleGithubRedirect}
-                  className="btn"
-                  style={{
-                    width: "100%",
-                    background: "#24292e",
-                    color: "#ffffff",
-                    border: "none",
-                    padding: "12px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "12px",
-                    borderRadius: "12px",
-                    boxShadow: "var(--shadow-sm)",
-                    cursor: "pointer",
-                    transition: "all var(--transition-fast)"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = "#1b1f23"}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "#24292e"}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                  <span style={{ fontWeight: "600" }}>Continue with GitHub</span>
-                </button>
-              </motion.div>
-            )}
-
-            {/* Email + Password Authentication View */}
-            {activeTab === "email" && (
-              <motion.form
-                key="email"
-                onSubmit={handleEmailLogin}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    VIT-AP Email Address
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                    <input
-                      type="email"
-                      placeholder="student.name2023@vitap.ac.in"
-                      className="form-input"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      style={{ paddingLeft: "38px" }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    Password
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      className="form-input"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      style={{ paddingLeft: "38px" }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!email) {
-                        setError("Please enter your email address first");
-                        return;
-                      }
-                      if (!validateEmail(email)) {
-                        setError("Please use a valid @vitap.ac.in student email");
-                        return;
-                      }
-                      setError("");
-                      alert(`A simulated password reset link has been successfully dispatched to ${email}!`);
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--accent)",
-                      fontSize: "0.75rem",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      padding: 0
-                    }}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ width: "100%", marginTop: "8px", borderRadius: "12px" }}
-                >
-                  Log In
-                </button>
-              </motion.form>
-            )}
-
-            {/* OTP Authentication View */}
-            {activeTab === "otp" && (
-              <motion.div
-                key="otp"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-              >
+                {/* Email OTP Section */}
                 {!otpSent ? (
-                  <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px", lineHeight: "1.4" }}>
-                      Enter your mobile number registered with VIT-AP. We will send you a 4-digit verification code.
-                    </p>
+                  <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                       <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                        Mobile Number
+                        Student Email / Gmail
                       </label>
                       <div style={{ position: "relative" }}>
-                        <Phone size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                        <span style={{ position: "absolute", left: "36px", top: "54%", transform: "translateY(-50%)", fontSize: "0.95rem", fontWeight: "500", color: "var(--text-secondary)" }}>+91</span>
+                        <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                         <input
-                          type="tel"
-                          placeholder="9876543210"
-                          maxLength={10}
+                          type="email"
+                          placeholder="yourname@gmail.com"
                           className="form-input"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          style={{ paddingLeft: "72px" }}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          style={{ paddingLeft: "38px" }}
+                          required
                         />
                       </div>
                     </div>
                     <button
                       type="submit"
                       className="btn btn-primary"
-                      style={{ width: "100%", marginTop: "8px", borderRadius: "12px" }}
+                      style={{ width: "100%", marginTop: "4px", borderRadius: "12px" }}
                     >
-                      Send Verification Code
+                      Send Verification OTP
                     </button>
                   </form>
                 ) : (
-                  <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     <div style={{ textAlign: "center" }}>
-                      <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                        Code sent to **+91 {phoneNumber}**
+                      <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                        6-Digit code sent to <strong>{email}</strong>
                       </p>
                       
                       {/* OTP Inputs */}
-                      <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
                         {otpValue.map((digit, index) => (
                           <input
                             key={index}
@@ -596,13 +536,13 @@ export default function AuthModal({ isOpen, onClose, message }) {
                             onChange={(e) => handleOtpInput(index, e.target.value)}
                             onKeyDown={(e) => handleOtpKeyDown(index, e)}
                             style={{
-                              width: "50px",
-                              height: "56px",
-                              borderRadius: "12px",
+                              width: "42px",
+                              height: "48px",
+                              borderRadius: "10px",
                               border: "1px solid var(--border-color)",
                               background: "rgba(0,0,0,0.02)",
                               textAlign: "center",
-                              fontSize: "1.5rem",
+                              fontSize: "1.3rem",
                               fontWeight: "600",
                               color: "var(--accent)",
                               outline: "none",
@@ -620,7 +560,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
                         className="btn btn-primary"
                         style={{ width: "100%", borderRadius: "12px" }}
                       >
-                        Verify & Login
+                        Verify & Sign In
                       </button>
                       
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
@@ -642,6 +582,252 @@ export default function AuthModal({ isOpen, onClose, message }) {
                     </div>
                   </form>
                 )}
+
+                <div style={{ textAlign: "center", marginTop: "8px" }}>
+                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                    Don't have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("signup");
+                        setError("");
+                        setOtpSent(false);
+                      }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--accent)",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        padding: 0,
+                        textDecoration: "underline"
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Sign Up View */}
+            {activeTab === "signup" && (
+              <motion.div
+                key="signup"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                style={{ width: "100%" }}
+              >
+                {!otpSent ? (
+                  <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", textAlign: "center", margin: "0 0 4px 0" }}>
+                      Create student account with Gmail or College Email
+                    </p>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Full Name</label>
+                      <input
+                        type="text"
+                        placeholder="Aditya Vardhan"
+                        className="form-input"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        style={{ height: "38px" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="aditya.vardhan@gmail.com"
+                        className="form-input"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        style={{ height: "38px" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Department</label>
+                        <select
+                          className="form-input"
+                          value={department}
+                          onChange={(e) => setDepartment(e.target.value)}
+                          required
+                          style={{
+                            height: "38px",
+                            background: "var(--bg-surface-solid)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-color)",
+                            padding: "0 10px",
+                            borderRadius: "8px",
+                            fontSize: "0.85rem"
+                          }}
+                        >
+                          <option value="">Select Dept</option>
+                          <option value="CSE">CSE</option>
+                          <option value="ECE">ECE</option>
+                          <option value="ME">Mech Eng</option>
+                          <option value="Management">Business/MBA</option>
+                          <option value="Law">VIT School of Law</option>
+                        </select>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Graduation Year</label>
+                        <select
+                          className="form-input"
+                          value={year}
+                          onChange={(e) => setYear(e.target.value)}
+                          required
+                          style={{
+                            height: "38px",
+                            background: "var(--bg-surface-solid)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-color)",
+                            padding: "0 10px",
+                            borderRadius: "8px",
+                            fontSize: "0.85rem"
+                          }}
+                        >
+                          <option value="">Select Year</option>
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Mobile (10 digits for WhatsApp)</label>
+                      <input
+                        type="tel"
+                        placeholder="9876543210"
+                        maxLength={10}
+                        className="form-input"
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value)}
+                        required
+                        style={{ height: "38px" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Short Bio</label>
+                      <textarea
+                        placeholder="I'm a computer science student interested in exchanging items on campus..."
+                        className="form-input"
+                        rows={2}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        style={{ resize: "none", fontSize: "0.85rem", padding: "8px 10px" }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      style={{ width: "100%", marginTop: "4px", borderRadius: "12px", height: "42px" }}
+                    >
+                      Send Verification OTP
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                        6-Digit code sent to <strong>{email}</strong>
+                      </p>
+                      
+                      {/* OTP Inputs */}
+                      <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
+                        {otpValue.map((digit, index) => (
+                          <input
+                            key={index}
+                            id={`otp-input-${index}`}
+                            type="text"
+                            maxLength={1}
+                            pattern="\d*"
+                            value={digit}
+                            onChange={(e) => handleOtpInput(index, e.target.value)}
+                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                            style={{
+                              width: "42px",
+                              height: "48px",
+                              borderRadius: "10px",
+                              border: "1px solid var(--border-color)",
+                              background: "rgba(0,0,0,0.02)",
+                              textAlign: "center",
+                              fontSize: "1.3rem",
+                              fontWeight: "600",
+                              color: "var(--accent)",
+                              outline: "none",
+                              transition: "all var(--transition-fast)"
+                            }}
+                            className="form-input"
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{ width: "100%", borderRadius: "12px" }}
+                      >
+                        Verify & Create Account
+                      </button>
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Didn't receive code?</span>
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: resendTimer === 0 ? "var(--accent)" : "var(--text-muted)",
+                            fontWeight: "600",
+                            cursor: resendTimer === 0 ? "pointer" : "not-allowed"
+                          }}
+                        >
+                          {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                <div style={{ textAlign: "center", marginTop: "12px" }}>
+                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("signin");
+                        setError("");
+                        setOtpSent(false);
+                      }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--accent)",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        padding: 0,
+                        textDecoration: "underline"
+                      }}
+                    >
+                      Sign In
+                    </button>
+                  </span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
