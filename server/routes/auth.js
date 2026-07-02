@@ -6,6 +6,7 @@ const { Resend } = require("resend");
 const auth = require("../middleware/auth");
 const User = require("../models/User");
 const Otp = require("../models/Otp");
+const bcrypt = require("bcryptjs");
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -111,7 +112,7 @@ router.post("/send-otp", async (req, res) => {
 // @desc    Verify OTP and log in / register the user
 // @access  Public
 router.post("/verify-otp", async (req, res) => {
-  const { email, otp, name, department, year, bio, mobile, photo } = req.body;
+  const { email, otp, name, department, year, bio, mobile, photo, password } = req.body;
 
   if (!email || !otp) {
     return res.status(400).json({ msg: "Email and OTP code are required" });
@@ -148,6 +149,7 @@ router.post("/verify-otp", async (req, res) => {
         year: year || "",
         bio: bio || "VIT-AP Student. Connect to buy or sell items.",
         mobile: mobile || "",
+        password: password ? bcrypt.hashSync(password, 10) : "",
         isAdmin: lowerEmail.includes("admin") || lowerEmail === "ramana.murthy@vitap.ac.in" || lowerEmail === "asrafpothuganti@gmail.com"
       });
       await user.save();
@@ -160,6 +162,10 @@ router.post("/verify-otp", async (req, res) => {
       if (bio && user.bio !== bio) { user.bio = bio; needsSave = true; }
       if (mobile && user.mobile !== mobile) { user.mobile = mobile; needsSave = true; }
       if (photo && user.photo !== photo) { user.photo = photo; needsSave = true; }
+      if (password) {
+        user.password = bcrypt.hashSync(password, 10);
+        needsSave = true;
+      }
 
       if (lowerEmail === "asrafpothuganti@gmail.com" && !user.isAdmin) {
         user.isAdmin = true;
@@ -196,29 +202,47 @@ router.post("/verify-otp", async (req, res) => {
 });
 
 // @route   POST api/auth/login
-// @desc    Auth user & get token (Login or Register on the fly)
+// @desc    Auth user & get token (Login via password or social trigger)
 // @access  Public
 router.post("/login", async (req, res) => {
-  const { email, name, photo, department, year, bio } = req.body;
+  const { email, password, name, photo, department, year, bio } = req.body;
 
   try {
-    let user = await User.findOne({ email });
+    const lowerEmail = email.toLowerCase();
+    let user = await User.findOne({ email: lowerEmail });
 
-    if (!user) {
-      // Create a new user if not exists
-      user = new User({
-        name: name || email.split("@")[0].split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
-        email,
-        photo: photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        department: department || "",
-        year: year || "",
-        bio: bio || "VIT-AP Student. Connect to buy or sell items.",
-        isAdmin: email.includes("admin") || email === "ramana.murthy@vitap.ac.in" || email === "asrafpothuganti@gmail.com"
-      });
-      await user.save();
-    } else if (email === "asrafpothuganti@gmail.com" && !user.isAdmin) {
-      user.isAdmin = true;
-      await user.save();
+    // If password is sent, we are doing a regular email/password login
+    if (password) {
+      if (!user) {
+        return res.status(400).json({ msg: "Account not found. Please sign up first." });
+      }
+      
+      if (!user.password) {
+        return res.status(400).json({ msg: "This account was created via social login or OTP. Please log in using Google/GitHub or request an OTP to set your password." });
+      }
+
+      const isMatch = bcrypt.compareSync(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ msg: "Invalid email or password." });
+      }
+    } else {
+      // Legacy on-the-fly login for demo / social redirects (when no password is provided)
+      if (!user) {
+        // Create a new user if not exists
+        user = new User({
+          name: name || lowerEmail.split("@")[0].split(".").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
+          email: lowerEmail,
+          photo: photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+          department: department || "",
+          year: year || "",
+          bio: bio || "VIT-AP Student. Connect to buy or sell items.",
+          isAdmin: lowerEmail.includes("admin") || lowerEmail === "ramana.murthy@vitap.ac.in" || lowerEmail === "asrafpothuganti@gmail.com"
+        });
+        await user.save();
+      } else if (lowerEmail === "asrafpothuganti@gmail.com" && !user.isAdmin) {
+        user.isAdmin = true;
+        await user.save();
+      }
     }
 
     // Create JWT Payload

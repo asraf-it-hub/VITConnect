@@ -55,6 +55,10 @@ const UserSchema = new mongoose.Schema({
   mobile: {
     type: String,
     default: ""
+  },
+  password: {
+    type: String,
+    default: ""
   }
 }, {
   toJSON: { virtuals: true },

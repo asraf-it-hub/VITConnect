@@ -7,6 +7,8 @@ export default function AuthModal({ isOpen, onClose, message }) {
   const { login, sendOtp, loginWithGoogle, loginWithGoogleOauth, loginWithGithubOauth } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState("signin"); // signin, signup
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [useOtpForLogin, setUseOtpForLogin] = useState(false);
   
   // Signup details fields
   const [name, setName] = useState("");
@@ -48,7 +50,6 @@ export default function AuthModal({ isOpen, onClose, message }) {
     }
   };
 
-
   // Timer logic for OTP Resend
   useEffect(() => {
     let interval;
@@ -69,6 +70,8 @@ export default function AuthModal({ isOpen, onClose, message }) {
 
   const resetState = () => {
     setEmail("");
+    setPassword("");
+    setUseOtpForLogin(false);
     setName("");
     setDepartment("");
     setYear("");
@@ -177,6 +180,38 @@ export default function AuthModal({ isOpen, onClose, message }) {
     }
   };
 
+  const handlePasswordLogin = async (e) => {
+    if (e) e.preventDefault();
+    setError("");
+
+    if (!email) {
+      setError("Email is required");
+      return;
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setError("Please use a valid student email (@vitap.ac.in) or Gmail (@gmail.com)");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await login(email, password, "password_mode");
+      setIsLoading(false);
+      if (res && res.success) {
+        handleClose();
+      } else {
+        setError(res?.error || "Invalid email or password.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError("Authentication connection error.");
+    }
+  };
+
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     setError("");
@@ -190,7 +225,7 @@ export default function AuthModal({ isOpen, onClose, message }) {
     try {
       let res;
       if (activeTab === "signup") {
-        res = await login(email, code, name, department, year, bio, mobile, "");
+        res = await login(email, code, name, department, year, bio, mobile, "", password);
       } else {
         res = await login(email, code);
       }
@@ -427,9 +462,10 @@ export default function AuthModal({ isOpen, onClose, message }) {
                   <span style={{ height: "1px", width: "40px", background: "var(--border-color)", marginLeft: "8px" }}></span>
                 </div>
 
-                {/* Email OTP Section */}
-                {!otpSent ? (
-                  <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Email Section */}
+                {!useOtpForLogin ? (
+                  // Email & Password Form
+                  <form onSubmit={handlePasswordLogin} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                       <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
                         Student Email / Gmail
@@ -447,79 +483,168 @@ export default function AuthModal({ isOpen, onClose, message }) {
                         />
                       </div>
                     </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="form-input"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+
                     <button
                       type="submit"
                       className="btn btn-primary"
                       style={{ width: "100%", marginTop: "4px", borderRadius: "12px" }}
                     >
-                      Send Verification OTP
+                      Log In
                     </button>
+                    
+                    <div style={{ textAlign: "center", marginTop: "4px" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseOtpForLogin(true);
+                          setError("");
+                          setOtpSent(false);
+                        }}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--accent)",
+                          fontSize: "0.8rem",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          textDecoration: "underline"
+                        }}
+                      >
+                        Log In via Email OTP instead
+                      </button>
+                    </div>
                   </form>
                 ) : (
-                  <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                        6-Digit code sent to <strong>{email}</strong>
-                      </p>
-                      
-                      {/* OTP Inputs */}
-                      <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
-                        {otpValue.map((digit, index) => (
-                          <input
-                            key={index}
-                            id={`otp-input-${index}`}
-                            type="text"
-                            maxLength={1}
-                            pattern="\d*"
-                            value={digit}
-                            onChange={(e) => handleOtpInput(index, e.target.value)}
-                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                            style={{
-                              width: "42px",
-                              height: "48px",
-                              borderRadius: "10px",
-                              border: "1px solid var(--border-color)",
-                              background: "rgba(0,0,0,0.02)",
-                              textAlign: "center",
-                              fontSize: "1.3rem",
-                              fontWeight: "600",
-                              color: "var(--accent)",
-                              outline: "none",
-                              transition: "all var(--transition-fast)"
-                            }}
-                            className="form-input"
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                        style={{ width: "100%", borderRadius: "12px" }}
-                      >
-                        Verify & Sign In
-                      </button>
-                      
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Didn't receive code?</span>
+                  // Email OTP Form
+                  <>
+                    {!otpSent ? (
+                      <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                            Student Email / Gmail
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                            <input
+                              type="email"
+                              placeholder="yourname@gmail.com"
+                              className="form-input"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              style={{ paddingLeft: "38px" }}
+                              required
+                            />
+                          </div>
+                        </div>
                         <button
-                          type="button"
-                          onClick={handleResendOtp}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: resendTimer === 0 ? "var(--accent)" : "var(--text-muted)",
-                            fontWeight: "600",
-                            cursor: resendTimer === 0 ? "pointer" : "not-allowed"
-                          }}
+                          type="submit"
+                          className="btn btn-primary"
+                          style={{ width: "100%", marginTop: "4px", borderRadius: "12px" }}
                         >
-                          {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                          Send Verification OTP
                         </button>
-                      </div>
-                    </div>
-                  </form>
+                        <div style={{ textAlign: "center", marginTop: "4px" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUseOtpForLogin(false);
+                              setError("");
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "var(--accent)",
+                              fontSize: "0.8rem",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              textDecoration: "underline"
+                            }}
+                          >
+                            Log In via Password instead
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <div style={{ textAlign: "center" }}>
+                          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                            6-Digit code sent to <strong>{email}</strong>
+                          </p>
+                          
+                          {/* OTP Inputs */}
+                          <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
+                            {otpValue.map((digit, index) => (
+                              <input
+                                key={index}
+                                id={`otp-input-${index}`}
+                                type="text"
+                                maxLength={1}
+                                pattern="\d*"
+                                value={digit}
+                                onChange={(e) => handleOtpInput(index, e.target.value)}
+                                onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                style={{
+                                  width: "42px",
+                                  height: "48px",
+                                  borderRadius: "10px",
+                                  border: "1px solid var(--border-color)",
+                                  background: "rgba(0,0,0,0.02)",
+                                  textAlign: "center",
+                                  fontSize: "1.3rem",
+                                  fontWeight: "600",
+                                  color: "var(--accent)",
+                                  outline: "none",
+                                  transition: "all var(--transition-fast)"
+                                }}
+                                className="form-input"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            style={{ width: "100%", borderRadius: "12px" }}
+                          >
+                            Verify & Sign In
+                          </button>
+                          
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
+                            <span style={{ color: "var(--text-muted)" }}>Didn't receive code?</span>
+                            <button
+                              type="button"
+                              onClick={handleResendOtp}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: resendTimer === 0 ? "var(--accent)" : "var(--text-muted)",
+                                fontWeight: "600",
+                                cursor: resendTimer === 0 ? "pointer" : "not-allowed"
+                              }}
+                            >
+                              {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    )}
+                  </>
                 )}
 
                 <div style={{ textAlign: "center", marginTop: "8px" }}>
@@ -585,6 +710,19 @@ export default function AuthModal({ isOpen, onClose, message }) {
                         className="form-input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
+                        style={{ height: "38px" }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-secondary)" }}>Password (to login next time without OTP)</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="form-input"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
                         style={{ height: "38px" }}
                       />

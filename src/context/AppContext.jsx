@@ -411,28 +411,36 @@ export const AppProvider = ({ children }) => {
       return offlineUser;
     };
 
-    // If it's a social/demo login trigger, bypass OTP verification and call the old login endpoint
-    if (otpOrPassword === "dummy-google" || nameOrMethod === "google" || nameOrMethod === "otp") {
+    // If it's a password login, or social/demo login trigger
+    if (nameOrMethod === "password_mode" || otpOrPassword === "dummy-google" || nameOrMethod === "google" || nameOrMethod === "otp") {
       try {
+        const bodyPayload = nameOrMethod === "password_mode"
+          ? { email, password: otpOrPassword }
+          : { email };
         const res = await fetch(`${API_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
+          body: JSON.stringify(bodyPayload)
         });
+        const data = await res.json();
         if (res.ok) {
-          const data = await res.json();
           localStorage.setItem("vitconnect_token", data.token);
           setCurrentUser(data.user);
           addNotification({
             type: "system",
-            text: `Welcome back, ${data.user.name}! Login verified via demo/social.`
+            text: `Welcome back, ${data.user.name}! Login verified successfully.`
           });
-          return data.user;
+          return nameOrMethod === "password_mode" ? { success: true, user: data.user } : data.user;
+        } else {
+          return nameOrMethod === "password_mode"
+            ? { success: false, error: data.msg || "Invalid email or password." }
+            : completeDemoLogin();
         }
-        return completeDemoLogin();
       } catch (e) {
         console.error("Auth server error:", e);
-        return completeDemoLogin();
+        return nameOrMethod === "password_mode"
+          ? { success: false, error: "Cannot connect to authentication server." }
+          : completeDemoLogin();
       }
     }
 
